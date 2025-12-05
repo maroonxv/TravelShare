@@ -1,67 +1,162 @@
+"""
+认证领域服务
+
+领域服务特征：
+1. 无状态
+2. 处理跨聚合操作
+3. 协调多个对象完成业务逻辑
+"""
+from typing import Optional
+
+from app_auth.domain.entity.user_entity import User
+from app_auth.domain.value_objects.user_value_objects import (
+    Email, Username, Password, UserRole
+)
+from app_auth.domain.demand_interface.i_user_repository import IUserRepository
+from app_auth.domain.demand_interface.i_password_hasher import IPasswordHasher
+from app_auth.domain.demand_interface.i_user_uniqueness_checker import IUserUniquenessChecker
 
 
 class AuthService:
-    def __init__(self, user_repo: IUserRepository, password_encoder: IPasswordEncoder) -> None:
-        self.user_repo = user_repo
-        self.password_encoder = password_encoder
-
+    """认证领域服务 - 无状态
     
-    def register_user(self, user_name: UserName, user_email: UserEmail, user_password: UserPassword, user_role: UserRole) -> None:
-        if self.user_repo.exists_by_username(user_name):
-            raise ValueError("Username already exists")
-        if self.user_repo.exists_by_email(user_email):
-            raise ValueError("Email already exists")
+    处理需要协调多个对象的认证业务逻辑。
+    简单的业务操作应该在聚合根内完成。
+    """
+    
+    def __init__(
+        self,
+        user_repo: IUserRepository,
+        password_hasher: IPasswordHasher,
+        uniqueness_checker: IUserUniquenessChecker
+    ):
+        self._user_repo = user_repo
+        self._password_hasher = password_hasher
+        self._uniqueness_checker = uniqueness_checker
+    
+    def register_user(
+        self,
+        username: Username,
+        email: Email,
+        password: Password,
+        role: UserRole = UserRole.USER
+    ) -> User:
+        """注册新用户
         
-        user_id = UserId.generate()
-
-        new_user = User(
-            user_id=user_id,
-            user_name=user_name,
-            user_email=user_email,
-            user_password_hash=self.password_encoder.encode(user_password),
-            user_role=user_role
+        验证唯一性约束后创建用户。
+        
+        Args:
+            username: 用户名
+            email: 邮箱
+            password: 密码
+            role: 用户角色
+            
+        Returns:
+            创建的用户实例
+            
+        Raises:
+            ValueError: 用户名或邮箱已存在
+        """
+        # 唯一性检查
+        if not self._uniqueness_checker.is_username_unique(username):
+            raise ValueError(f"Username '{username.value}' already exists")
+        
+        if not self._uniqueness_checker.is_email_unique(email):
+            raise ValueError(f"Email '{email.value}' already exists")
+        
+        # 通过工厂方法创建用户
+        user = User.register(
+            username=username,
+            email=email,
+            password=password,
+            password_hasher=self._password_hasher,
+            role=role
         )
-        new_user.event_store.append(UserRegisteredEvent(
-            user_id=user_id,
-            user_name=user_name,
-            user_email=user_email,
-            user_role=user_role
-        ))
-        self.user_repo.add_user(new_user)
-
-    def authenticate(self, email: UserEmail, password: UserPassword) -> bool:
-        user = self.user_repo.get_by_email(email)
-        if not user:
-            raise ValueError("User not found")
         
-        if self.password_encoder.verify(password, user.user_password_hash):
-            user.event_store.append(UserLoggedInEvent(
-                user_id=user.user_id,
-                user_name=user.user_name,
-                user_email=user.user_email,
-                user_role=user.user_role
-            ))
-            return user
-        else:
+        # 持久化
+        self._user_repo.save(user)
+        
+        return user
+    
+    def authenticate(
+        self,
+        email: Email,
+        password: Password,
+        login_ip: Optional[str] = None,
+        user_agent: Optional[str] = None
+    ) -> Optional[User]:
+        """用户认证
+        
+        Args:
+            email: 邮箱
+            password: 密码
+            login_ip: 登录IP（可选）
+            user_agent: 用户代理（可选）
+            
+        Returns:
+            认证成功返回用户实例，失败返回 None
+        """
+        user = self._user_repo.find_by_email(email)
+        if not user:
             return None
-
-    def change_password(self, user_id: UserId, new_password: UserPassword) -> None:
-        user = self.user_repo.get_by_id(user_id)
-        if not user:
-            raise ValueError("User not found")
-
-        if user.user_role == UserRole.ADMIN:
-            raise ValueError("Admin password cannot be changed")
         
-        # TODO: 增加邮箱验证码验证
-
-        if self.password_encoder.verify(new_password, user.user_password_hash):
-            raise ValueError("New password cannot be the same as the old password")
-
-        user.change_password(new_password)
-        user.event_store.append(UserPasswordChangedEvent(
-            user_id=user.user_id,
-            user_name=user.user_name,
-            user_email=user.user_email,
-            user_role=user.user_role
-        ))
+        try:
+            if user.authenticate(password, self._password_hasher):
+                # 记录登录事件
+                user.record_login(login_ip=login_ip, user_agent=user_agent)
+                # 保存以触发事件
+                self._user_repo.save(user)
+                return user
+        except ValueError:
+            # 账户停用等情况
+            pass
+        
+        return None
+    
+    def change_password(
+        self,
+        user: User,
+        old_password: Password,
+        new_password: Password
+    ) -> None:
+        """更改密码
+        
+        Args:
+            user: 用户实例
+            old_password: 旧密码
+            new_password: 新密码
+            
+        Raises:
+            ValueError: 旧密码不正确或新旧密码相同
+        """
+        user.change_password(
+            old_password=old_password,
+            new_password=new_password,
+            password_hasher=self._password_hasher
+        )
+        self._user_repo.save(user)
+    
+    def request_password_reset(self, email: Email) -> Optional[User]:
+        """请求密码重置
+        
+        查找用户并返回，由应用层生成重置令牌。
+        
+        Args:
+            email: 用户邮箱
+            
+        Returns:
+            存在则返回用户实例，不存在返回 None
+        """
+        return self._user_repo.find_by_email(email)
+    
+    def reset_password(self, user: User, new_password: Password) -> None:
+        """重置密码
+        
+        由应用层验证令牌后调用。
+        
+        Args:
+            user: 用户实例
+            new_password: 新密码
+        """
+        user.reset_password(new_password, self._password_hasher)
+        self._user_repo.save(user)
