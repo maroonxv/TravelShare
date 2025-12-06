@@ -2,7 +2,7 @@
 旅行及相关持久化对象 (PO - Persistent Object)
 
 用于 SQLAlchemy ORM 映射，与数据库表对应。
-包含 TripPO, TripMemberPO, TripDayPO, ActivityPO。
+包含 TripPO, TripMemberPO, TripDayPO, ActivityPO, TransitPO。
 """
 from datetime import datetime, date, time
 from decimal import Decimal
@@ -17,9 +17,13 @@ from app_travel.domain.aggregate.trip_aggregate import Trip
 from app_travel.domain.entity.trip_member import TripMember
 from app_travel.domain.entity.trip_day_entity import TripDay
 from app_travel.domain.entity.activity import Activity
+from app_travel.domain.entity.transit import Transit
 from app_travel.domain.value_objects.travel_value_objects import (
     TripId, TripName, TripDescription, DateRange, Money,
     TripStatus, TripVisibility, MemberRole, ActivityType, Location
+)
+from app_travel.domain.value_objects.transit_value_objects import (
+    TransportMode, RouteInfo, TransitCost
 )
 
 
@@ -100,6 +104,110 @@ class ActivityPO(Base):
         )
 
 
+class TransitPO(Base):
+    """交通持久化对象"""
+    
+    __tablename__ = 'transits'
+    
+    id = Column(String(36), primary_key=True)
+    trip_day_id = Column(Integer, ForeignKey('trip_days.id'), nullable=False, index=True)
+    
+    from_activity_id = Column(String(36), nullable=False)
+    to_activity_id = Column(String(36), nullable=False)
+    transport_mode = Column(String(20), nullable=False)  # driving, walking, transit, cycling
+    
+    # 路线信息
+    distance_meters = Column(Numeric(12, 2), nullable=False, default=0)
+    duration_seconds = Column(Integer, nullable=False, default=0)
+    polyline = Column(Text, nullable=True)
+    
+    # 时间
+    departure_time = Column(Time, nullable=False)
+    arrival_time = Column(Time, nullable=False)
+    
+    # 费用
+    cost_amount = Column(Numeric(10, 2), nullable=True)
+    cost_currency = Column(String(3), nullable=True, default='CNY')
+    fuel_cost = Column(Numeric(10, 2), nullable=True)
+    toll_cost = Column(Numeric(10, 2), nullable=True)
+    ticket_cost = Column(Numeric(10, 2), nullable=True)
+    
+    notes = Column(Text, nullable=True)
+    
+    # 关联
+    trip_day = relationship('TripDayPO', back_populates='transits')
+    
+    def to_domain(self) -> Transit:
+        """转换为领域实体"""
+        route_info = RouteInfo(
+            distance_meters=float(self.distance_meters),
+            duration_seconds=int(self.duration_seconds),
+            polyline=self.polyline
+        )
+        
+        # 构建 TransitCost
+        estimated_cost = None
+        if self.cost_amount is not None:
+            estimated_money = Money(amount=self.cost_amount, currency=self.cost_currency or 'CNY')
+            fuel_money = Money(amount=self.fuel_cost, currency='CNY') if self.fuel_cost else None
+            toll_money = Money(amount=self.toll_cost, currency='CNY') if self.toll_cost else None
+            ticket_money = Money(amount=self.ticket_cost, currency='CNY') if self.ticket_cost else None
+            estimated_cost = TransitCost(
+                estimated_cost=estimated_money,
+                fuel_cost=fuel_money,
+                toll_cost=toll_money,
+                ticket_cost=ticket_money
+            )
+        
+        return Transit(
+            id=self.id,
+            from_activity_id=self.from_activity_id,
+            to_activity_id=self.to_activity_id,
+            transport_mode=TransportMode.from_string(self.transport_mode),
+            route_info=route_info,
+            departure_time=self.departure_time,
+            arrival_time=self.arrival_time,
+            estimated_cost=estimated_cost,
+            notes=self.notes or ''
+        )
+    
+    @classmethod
+    def from_domain(cls, transit: Transit, trip_day_id: int) -> 'TransitPO':
+        """从领域实体创建"""
+        cost_amount = None
+        fuel_cost = None
+        toll_cost = None
+        ticket_cost = None
+        
+        if transit.estimated_cost:
+            cost_amount = transit.estimated_cost.estimated_cost.amount
+            if transit.estimated_cost.fuel_cost:
+                fuel_cost = transit.estimated_cost.fuel_cost.amount
+            if transit.estimated_cost.toll_cost:
+                toll_cost = transit.estimated_cost.toll_cost.amount
+            if transit.estimated_cost.ticket_cost:
+                ticket_cost = transit.estimated_cost.ticket_cost.amount
+        
+        return cls(
+            id=transit.id,
+            trip_day_id=trip_day_id,
+            from_activity_id=transit.from_activity_id,
+            to_activity_id=transit.to_activity_id,
+            transport_mode=transit.transport_mode.value,
+            distance_meters=Decimal(str(transit.route_info.distance_meters)),
+            duration_seconds=transit.route_info.duration_seconds,
+            polyline=transit.route_info.polyline,
+            departure_time=transit.departure_time,
+            arrival_time=transit.arrival_time,
+            cost_amount=cost_amount,
+            cost_currency='CNY',
+            fuel_cost=fuel_cost,
+            toll_cost=toll_cost,
+            ticket_cost=ticket_cost,
+            notes=transit.notes
+        )
+
+
 class TripDayPO(Base):
     """旅行日程持久化对象"""
     
@@ -116,6 +224,7 @@ class TripDayPO(Base):
     # 关联
     trip = relationship('TripPO', back_populates='days')
     activities = relationship('ActivityPO', back_populates='trip_day', cascade='all, delete-orphan')
+    transits = relationship('TransitPO', back_populates='trip_day', cascade='all, delete-orphan')
     
     def to_domain(self) -> TripDay:
         """转换为领域实体"""
@@ -130,6 +239,11 @@ class TripDayPO(Base):
             trip_day._activities.append(activity_po.to_domain())
         # 按时间排序
         trip_day._activities.sort(key=lambda a: a.start_time)
+        
+        # 添加交通
+        for transit_po in self.transits:
+            trip_day._transits.append(transit_po.to_domain())
+        
         return trip_day
     
     @classmethod
@@ -270,6 +384,7 @@ class TripPO(Base):
         for day in trip.days:
             day_po = TripDayPO.from_domain(day, trip.id.value)
             day_po.activities = [ActivityPO.from_domain(a, day_po.id) for a in day.activities]
+            day_po.transits = [TransitPO.from_domain(t, day_po.id) for t in day.transits]
             po.days.append(day_po)
         
         return po

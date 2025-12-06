@@ -130,3 +130,12 @@ class DayNoteUpdatedEvent(DomainEvent):
     """日程备注更新事件"""
     trip_id: str = ""
     day_index: int = 0
+
+
+@dataclass(frozen=True)
+class TransitCalculatedEvent(DomainEvent):
+    """交通计算完成事件"""
+    trip_id: str = ""
+    day_index: int = 0
+    transit_count: int = 0
+    warnings_count: int = 0

@@ -74,7 +74,7 @@ class TripNotificationHandler:
         
         通知所有成员旅行已开始。
         """
-        # 需要从 repository 获取成员列表
+        # TODO：需要从 repository 获取成员列表
         # 这里仅作为示例
         pass
     
@@ -83,4 +83,5 @@ class TripNotificationHandler:
         
         通知所有成员旅行已取消。
         """
+        # TODO
         pass

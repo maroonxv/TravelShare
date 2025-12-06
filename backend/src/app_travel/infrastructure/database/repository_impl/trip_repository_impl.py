@@ -2,7 +2,7 @@
 旅行仓库实现
 
 实现 ITripRepository 接口。
-负责 Trip 聚合根及其子实体（TripMember, TripDay, Activity）的持久化。
+负责 Trip 聚合根及其子实体（TripMember, TripDay, Activity, Transit）的持久化。
 """
 from typing import List, Optional
 
@@ -11,7 +11,7 @@ from app_travel.domain.aggregate.trip_aggregate import Trip
 from app_travel.domain.value_objects.travel_value_objects import TripId, TripStatus
 from app_travel.infrastructure.database.dao_interface.i_trip_dao import ITripDao
 from app_travel.infrastructure.database.persistent_model.trip_po import (
-    TripPO, TripMemberPO, TripDayPO, ActivityPO
+    TripPO, TripMemberPO, TripDayPO, ActivityPO, TransitPO
 )
 
 
@@ -85,6 +85,9 @@ class TripRepositoryImpl(ITripRepository):
             # 添加活动
             for activity in day.activities:
                 day_po.activities.append(ActivityPO.from_domain(activity, 0))  # ID 将由数据库生成
+            # 添加交通
+            for transit in day.transits:
+                day_po.transits.append(TransitPO.from_domain(transit, 0))  # ID 将由数据库生成
             trip_po.days.append(day_po)
     
     def find_by_id(self, trip_id: TripId) -> Optional[Trip]:

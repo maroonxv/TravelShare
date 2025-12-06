@@ -22,7 +22,7 @@ from app_travel.domain.domain_event.travel_events import (
     DomainEvent, TripCreatedEvent, TripStartedEvent, TripCompletedEvent,
     TripCancelledEvent, TripUpdatedEvent, TripMemberAddedEvent,
     TripMemberRemovedEvent, TripMemberRoleChangedEvent,
-    ActivityAddedEvent, ActivityRemovedEvent, ItineraryUpdatedEvent
+    ActivityAddedEvent, ActivityRemovedEvent, ActivityUpdatedEvent, ItineraryUpdatedEvent
 )
 
 if TYPE_CHECKING:
@@ -500,6 +500,13 @@ class Trip:
             )
             for warning in warnings:
                 result.add_warning(warning)
+        
+        
+        self._add_event(ActivityUpdatedEvent(
+            trip_id=self._id.value,
+            day_index=day_index,
+            activity_id=activity.id
+        ))
         
         return result
     
