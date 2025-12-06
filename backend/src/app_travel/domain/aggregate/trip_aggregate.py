@@ -2,24 +2,31 @@
 Trip 聚合根 - 充血模型
 
 管理整个旅行生命周期：计划中 -> 进行中 -> 已完成/已取消
-包含：日程(TripDay)、成员(TripMember)、活动(Activity)
+包含：日程(TripDay)、成员(TripMember)、活动(Activity)、交通(Transit)
 """
 from datetime import datetime, date, timedelta
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from app_travel.domain.value_objects.travel_value_objects import (
     TripId, TripName, TripDescription, DateRange, Money,
-    TripStatus, TripVisibility, MemberRole
+    TripStatus, TripVisibility, MemberRole, Location
 )
 from app_travel.domain.entity.trip_day_entity import TripDay
 from app_travel.domain.entity.trip_member import TripMember
 from app_travel.domain.entity.activity import Activity
+from app_travel.domain.entity.transit import Transit
+from app_travel.domain.value_objects.itinerary_value_objects import (
+    TransitCalculationResult, ItineraryWarning
+)
 from app_travel.domain.domain_event.travel_events import (
     DomainEvent, TripCreatedEvent, TripStartedEvent, TripCompletedEvent,
     TripCancelledEvent, TripUpdatedEvent, TripMemberAddedEvent,
     TripMemberRemovedEvent, TripMemberRoleChangedEvent,
     ActivityAddedEvent, ActivityRemovedEvent, ItineraryUpdatedEvent
 )
+
+if TYPE_CHECKING:
+    from app_travel.domain.domain_service.itinerary_service import ItineraryService
 
 
 class Trip:
@@ -338,12 +345,25 @@ class Trip:
                 return day
         return None
     
-    def add_activity(self, day_index: int, activity: Activity) -> None:
+    # ==================== 活动管理（分离 add 和 modify）====================
+    
+    def add_activity(
+        self, 
+        day_index: int, 
+        activity: Activity,
+        itinerary_service: Optional['ItineraryService'] = None
+    ) -> Optional[TransitCalculationResult]:
         """添加活动到指定日期
+        
+        如果提供 itinerary_service，会自动计算与前一个活动之间的交通。
         
         Args:
             day_index: 日期索引（从0开始）
             activity: 活动实体
+            itinerary_service: 行程服务（可选）
+            
+        Returns:
+            TransitCalculationResult: 如果计算了交通则返回结果，否则返回 None
         """
         if day_index < 0 or day_index >= len(self._days):
             raise ValueError(f"Invalid day index: {day_index}")
@@ -351,8 +371,37 @@ class Trip:
         if self._status == TripStatus.COMPLETED:
             raise ValueError("Cannot modify completed trip")
         
-        self._days[day_index].add_activity(activity)
+        day = self._days[day_index]
+        
+        # 获取前一个活动（在添加新活动之前）
+        prev_activity = self._get_previous_activity_for_new(day, activity)
+        
+        # 添加活动
+        day.add_activity(activity)
         self._updated_at = datetime.utcnow()
+        
+        result = None
+        
+        # 计算与前一个活动的交通
+        if itinerary_service and prev_activity:
+            result = TransitCalculationResult()
+            try:
+                transit = itinerary_service.calculate_transit_between_two_activities(
+                    prev_activity, activity
+                )
+                day.add_transit(transit)
+                result.add_transit(transit)
+                
+                # 检查时间可行性
+                warnings = itinerary_service.validate_itinerary_feasibility(
+                    [prev_activity, activity], [transit]
+                )
+                for warning in warnings:
+                    result.add_warning(warning)
+            except Exception as e:
+                result.add_warning(ItineraryWarning.unreachable(
+                    prev_activity.id, activity.id, str(e)
+                ))
         
         self._add_event(ActivityAddedEvent(
             trip_id=self._id.value,
@@ -360,32 +409,201 @@ class Trip:
             activity_id=activity.id,
             activity_name=activity.name
         ))
+        
+        return result
     
-    def remove_activity(self, day_index: int, activity_id: str) -> None:
-        """从指定日期移除活动"""
+    def modify_activity(
+        self,
+        day_index: int,
+        activity_id: str,
+        itinerary_service: Optional['ItineraryService'] = None,
+        **updates
+    ) -> Optional[TransitCalculationResult]:
+        """修改指定活动
+        
+        修改后重新计算：
+        1. 前一个Activity -> 该Activity 的Transit
+        2. 该Activity -> 后一个Activity 的Transit
+        
+        Args:
+            day_index: 日期索引
+            activity_id: 活动ID
+            itinerary_service: 行程服务（可选）
+            **updates: 要更新的字段
+            
+        Returns:
+            TransitCalculationResult: 如果计算了交通则返回结果，否则返回 None
+        """
         if day_index < 0 or day_index >= len(self._days):
             raise ValueError(f"Invalid day index: {day_index}")
         
-        if self._days[day_index].remove_activity(activity_id):
+        if self._status == TripStatus.COMPLETED:
+            raise ValueError("Cannot modify completed trip")
+        
+        day = self._days[day_index]
+        activity = day.find_activity(activity_id)
+        
+        if not activity:
+            raise ValueError(f"Activity {activity_id} not found")
+        
+        # 记录修改前的前后活动
+        prev_activity = day.get_previous_activity(activity)
+        next_activity = day.get_next_activity(activity)
+        
+        # 更新活动
+        activity.update(**updates)
+        
+        # 重新排序（因为时间可能变化）
+        day._activities.sort(key=lambda a: a.start_time)
+        
+        self._updated_at = datetime.utcnow()
+        
+        result = None
+        
+        # 重新计算相关的Transit
+        if itinerary_service:
+            result = TransitCalculationResult()
+            
+            # 重新计算：前一个Activity -> 该Activity
+            if prev_activity:
+                day.remove_transit_between(prev_activity.id, activity_id)
+                try:
+                    transit = itinerary_service.calculate_transit_between_two_activities(
+                        prev_activity, activity
+                    )
+                    day.add_transit(transit)
+                    result.add_transit(transit)
+                except Exception as e:
+                    result.add_warning(ItineraryWarning.unreachable(
+                        prev_activity.id, activity_id, str(e)
+                    ))
+            
+            # 重新计算：该Activity -> 后一个Activity
+            if next_activity:
+                day.remove_transit_between(activity_id, next_activity.id)
+                try:
+                    transit = itinerary_service.calculate_transit_between_two_activities(
+                        activity, next_activity
+                    )
+                    day.add_transit(transit)
+                    result.add_transit(transit)
+                except Exception as e:
+                    result.add_warning(ItineraryWarning.unreachable(
+                        activity_id, next_activity.id, str(e)
+                    ))
+            
+            # 验证可行性
+            all_activities = day.activities
+            all_transits = day.transits
+            warnings = itinerary_service.validate_itinerary_feasibility(
+                all_activities, all_transits
+            )
+            for warning in warnings:
+                result.add_warning(warning)
+        
+        return result
+    
+    def remove_activity(
+        self, 
+        day_index: int, 
+        activity_id: str,
+        itinerary_service: Optional['ItineraryService'] = None
+    ) -> Optional[TransitCalculationResult]:
+        """从指定日期移除活动
+        
+        移除后重新计算前后活动之间的Transit。
+        
+        Args:
+            day_index: 日期索引
+            activity_id: 活动ID
+            itinerary_service: 行程服务（可选）
+            
+        Returns:
+            TransitCalculationResult: 如果计算了交通则返回结果，否则返回 None
+        """
+        if day_index < 0 or day_index >= len(self._days):
+            raise ValueError(f"Invalid day index: {day_index}")
+        
+        day = self._days[day_index]
+        activity = day.find_activity(activity_id)
+        
+        if not activity:
+            return None
+        
+        # 记录前后活动
+        prev_activity = day.get_previous_activity(activity)
+        next_activity = day.get_next_activity(activity)
+        
+        # 移除活动（同时会移除相关Transit）
+        if day.remove_activity(activity_id):
             self._updated_at = datetime.utcnow()
+            
+            result = None
+            
+            # 如果前后活动都存在，计算它们之间的新Transit
+            if itinerary_service and prev_activity and next_activity:
+                result = TransitCalculationResult()
+                try:
+                    transit = itinerary_service.calculate_transit_between_two_activities(
+                        prev_activity, next_activity
+                    )
+                    day.add_transit(transit)
+                    result.add_transit(transit)
+                except Exception as e:
+                    result.add_warning(ItineraryWarning.unreachable(
+                        prev_activity.id, next_activity.id, str(e)
+                    ))
+            
             self._add_event(ActivityRemovedEvent(
                 trip_id=self._id.value,
                 day_index=day_index,
                 activity_id=activity_id
             ))
+            
+            return result
+        
+        return None
     
-    def update_day_itinerary(self, day_index: int, activities: List[Activity]) -> None:
-        """批量更新某日行程"""
+    def update_day_itinerary(
+        self, 
+        day_index: int, 
+        activities: List[Activity],
+        itinerary_service: Optional['ItineraryService'] = None
+    ) -> Optional[TransitCalculationResult]:
+        """批量更新某日行程
+        
+        如果提供 itinerary_service，会自动计算所有活动之间的交通。
+        
+        Args:
+            day_index: 日期索引
+            activities: 新的活动列表
+            itinerary_service: 行程服务（可选）
+            
+        Returns:
+            TransitCalculationResult: 如果计算了交通则返回结果，否则返回 None
+        """
         if day_index < 0 or day_index >= len(self._days):
             raise ValueError(f"Invalid day index: {day_index}")
         
-        self._days[day_index].replace_activities(activities)
+        day = self._days[day_index]
+        day.replace_activities(activities)
         self._updated_at = datetime.utcnow()
+        
+        result = None
+        
+        # 计算所有活动之间的交通
+        if itinerary_service and len(activities) >= 2:
+            result = itinerary_service.calculate_transits_between_activities(activities)
+            # 添加所有Transit到日程
+            for transit in result.transits:
+                day.add_transit(transit)
         
         self._add_event(ItineraryUpdatedEvent(
             trip_id=self._id.value,
             day_index=day_index
         ))
+        
+        return result
     
     def update_day_notes(self, day_index: int, notes: str) -> None:
         """更新某日备注"""
@@ -394,6 +612,27 @@ class Trip:
         
         self._days[day_index].update_notes(notes)
         self._updated_at = datetime.utcnow()
+    
+    def _get_previous_activity_for_new(
+        self, day: TripDay, new_activity: Activity
+    ) -> Optional[Activity]:
+        """获取新活动的前一个活动（在新活动添加之前调用）"""
+        activities = day.activities
+        if not activities:
+            return None
+        
+        # 按时间排序
+        sorted_activities = sorted(activities, key=lambda a: a.start_time)
+        
+        # 找到新活动应该插入的位置的前一个活动
+        for i, a in enumerate(sorted_activities):
+            if a.start_time > new_activity.start_time:
+                if i > 0:
+                    return sorted_activities[i - 1]
+                return None
+        
+        # 新活动在所有活动之后
+        return sorted_activities[-1] if sorted_activities else None
     
     # ==================== 状态管理 ====================
     
@@ -472,6 +711,46 @@ class Trip:
         """更新预算"""
         self._budget = new_budget
         self._updated_at = datetime.utcnow()
+    
+    # ==================== 统计报表 ====================
+    
+    def generate_statistics(self) -> 'TripStatistics':
+        """生成整个旅行的统计报表
+        
+        Returns:
+            TripStatistics: 包含总里程、游玩时间、交通时间、花费、打卡地点
+        """
+        from app_travel.domain.value_objects.trip_statistics import TripStatistics
+        
+        total_distance = 0.0
+        total_play_time = 0
+        total_transit_time = 0
+        activity_cost = Money.zero()
+        transit_cost = Money.zero()
+        visited_locations: List[Location] = []
+        
+        for day in self._days:
+            # 统计活动
+            total_play_time += day.calculate_total_play_time()
+            activity_cost = activity_cost + day.calculate_activity_cost()
+            
+            for activity in day.activities:
+                visited_locations.append(activity.location)
+            
+            # 统计交通
+            total_distance += day.calculate_total_transit_distance()
+            total_transit_time += day.calculate_total_transit_time()
+            transit_cost = transit_cost + day.calculate_transit_cost()
+        
+        return TripStatistics(
+            total_distance_meters=total_distance,
+            total_play_time_minutes=total_play_time,
+            total_transit_time_minutes=total_transit_time,
+            total_estimated_cost=activity_cost + transit_cost,
+            activity_cost=activity_cost,
+            transit_cost=transit_cost,
+            visited_locations=visited_locations
+        )
     
     # ==================== 查询方法 ====================
     
