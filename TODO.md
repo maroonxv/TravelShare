@@ -10,10 +10,12 @@
 确保现在post中的图片在存储时，存储的是我位于本机文件系统上的图片文件路径
 
 
-根据现有最新的 sqlalchemy_post_dao.pyss，更新 travel_sharing_app_v0\backend\tests\unit\database\dao\test_post_dao.py，使得测试覆盖率很高。但是禁止你因为测试没有通过而修改测试让它通过（这是先射箭后画靶子的愚蠢行为），而是根据测试失败的信息，修改被测试的代码，使得测试通过。
+
 
 
 在travel_sharing_app_v0\backend\tests\unit\aggregate 中分别用pytest创建测试travel_sharing_app_v0\backend\src\app_social\domain\aggregate\conversation_aggregate.py、travel_sharing_app_v0\backend\src\app_social\domain\aggregate\post_aggregate.py、travel_sharing_app_v0\backend\src\app_travel\domain\aggregate\trip_aggregate.py的覆盖率很高的测试。在测试不通过时，修改被测试的代码，使得测试通过，而不是修改测试让它通过（这是先射箭后画靶子的愚蠢行为）。
+
+在travel_sharing_app_v0\backend\tests\unit\database\repository 中分别用pytest创建测试travel_sharing_app_v0\backend\src\app_social\infrastructure\database\repository_impl\conversation_repository_impl.py、travel_sharing_app_v0\backend\src\app_social\infrastructure\database\repository_impl\post_repository_impl.py、travel_sharing_app_v0\backend\src\app_travel\infrastructure\database\repository_impl\trip_repository_impl.py的覆盖率很高的测试。在测试不通过时，修改被测试的代码，使得测试通过，而不是修改测试让它通过（这是先射箭后画靶子的愚蠢行为）。
 
 
 

@@ -4,7 +4,7 @@ Post 聚合根 - 充血模型
 管理帖子及其评论、点赞。
 可关联到旅行(trip_id)作为游记。
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 import uuid
 
@@ -42,7 +42,7 @@ class Post:
         self._content = content
         self._visibility = visibility
         self._trip_id = trip_id  # 关联的旅行ID（游记）
-        self._created_at = created_at or datetime.now(datetime.timezone.utc)
+        self._created_at = created_at or datetime.now(timezone.utc)
         self._updated_at = updated_at or self._created_at
         self._is_deleted = is_deleted
         self._comments: List[Comment] = []
@@ -185,7 +185,7 @@ class Post:
             raise ValueError("Cannot update deleted post")
         
         self._content = new_content
-        self._updated_at = datetime.utcnow()
+        self._updated_at = datetime.now(timezone.utc)
         
         self._add_event(PostUpdatedEvent(
             post_id=self._id.value,
@@ -203,7 +203,7 @@ class Post:
         
         old_visibility = self._visibility
         self._visibility = new_visibility
-        self._updated_at = datetime.utcnow()
+        self._updated_at = datetime.now(timezone.utc)
         
         self._add_event(PostVisibilityChangedEvent(
             post_id=self._id.value,
@@ -217,7 +217,7 @@ class Post:
             return
         
         self._is_deleted = True
-        self._updated_at = datetime.utcnow()
+        self._updated_at = datetime.now(timezone.utc)
         
         self._add_event(PostDeletedEvent(
             post_id=self._id.value,
@@ -260,7 +260,7 @@ class Post:
         )
         
         self._comments.append(comment)
-        self._updated_at = datetime.utcnow()
+        self._updated_at = datetime.now(timezone.utc)
         
         self._add_event(CommentAddedEvent(
             post_id=self._id.value,
@@ -290,7 +290,7 @@ class Post:
             raise ValueError("Not authorized to delete this comment")
         
         comment.soft_delete()
-        self._updated_at = datetime.utcnow()
+        self._updated_at = datetime.now(timezone.utc)
         
         self._add_event(CommentRemovedEvent(
             post_id=self._id.value,
@@ -387,11 +387,12 @@ class Post:
     
     # ==================== 权限检查 ====================
     
-    def can_be_viewed_by(self, user_id: str) -> bool:
+    def can_be_viewed_by(self, user_id: str, is_friend: bool = False) -> bool:
         """检查用户是否可以查看此帖子
         
         Args:
             user_id: 访问者ID
+            is_friend: 访问者是否为作者的好友（由应用层传入上下文）
         """
         if self._is_deleted:
             return False
@@ -405,6 +406,9 @@ class Post:
         if self._visibility == PostVisibility.PRIVATE:
             return False
         
+        if self._visibility == PostVisibility.FRIENDS:
+            return is_friend
+            
         return False
     
     def can_be_edited_by(self, user_id: str) -> bool:

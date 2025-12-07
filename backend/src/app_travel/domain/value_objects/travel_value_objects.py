@@ -122,6 +122,12 @@ class Money:
             raise ValueError("Amount cannot be negative")
     
     def __add__(self, other: 'Money') -> 'Money':
+        # 允许加上金额为0的任意货币（初始值为0的情况）
+        if self.amount == 0 and self.currency != other.currency:
+            return Money(other.amount, other.currency)
+        if other.amount == 0 and self.currency != other.currency:
+            return Money(self.amount, self.currency)
+            
         if self.currency != other.currency:
             raise ValueError(f"Cannot add different currencies: {self.currency} and {other.currency}")
         return Money(self.amount + other.amount, self.currency)
