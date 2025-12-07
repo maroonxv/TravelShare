@@ -5,7 +5,7 @@ Post 聚合根 - 充血模型
 可关联到旅行(trip_id)作为游记。
 """
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 import uuid
 
 from app_social.domain.value_objects.social_value_objects import (
@@ -42,7 +42,7 @@ class Post:
         self._content = content
         self._visibility = visibility
         self._trip_id = trip_id  # 关联的旅行ID（游记）
-        self._created_at = created_at or datetime.utcnow()
+        self._created_at = created_at or datetime.now(datetime.timezone.utc)
         self._updated_at = updated_at or self._created_at
         self._is_deleted = is_deleted
         self._comments: List[Comment] = []
@@ -157,12 +157,12 @@ class Post:
         return self._is_deleted
     
     @property
-    def comments(self) -> List[Comment]:
-        return [c for c in self._comments if not c.is_deleted]
+    def comments(self) -> Tuple[Comment, ...]:
+        return tuple(c for c in self._comments if not c.is_deleted)
     
     @property
-    def likes(self) -> List[Like]:
-        return self._likes.copy()
+    def likes(self) -> Tuple[Like, ...]:
+        return tuple(self._likes)
     
     @property
     def like_count(self) -> int:
@@ -388,7 +388,11 @@ class Post:
     # ==================== 权限检查 ====================
     
     def can_be_viewed_by(self, user_id: str) -> bool:
-        """检查用户是否可以查看此帖子"""
+        """检查用户是否可以查看此帖子
+        
+        Args:
+            user_id: 访问者ID
+        """
         if self._is_deleted:
             return False
         
@@ -401,8 +405,7 @@ class Post:
         if self._visibility == PostVisibility.PRIVATE:
             return False
         
-        # FRIENDS visibility 需要检查好友关系，由应用层处理
-        return True
+        return False
     
     def can_be_edited_by(self, user_id: str) -> bool:
         """检查用户是否可以编辑此帖子"""
