@@ -98,17 +98,17 @@ class SqlAlchemyPostDao(IPostDao):
 
     def add(self, post_po: PostPO) -> None:
         self.session.add(post_po)
-        # 移除显式 flush，由应用层统一 commit
+        self.session.flush() # Explicit flush to avoid pending state issues
 
     def update(self, post_po: PostPO) -> None:
         self.session.merge(post_po)
-        # 移除显式 flush
+        self.session.flush() # Explicit flush to avoid pending state issues
 
     def delete(self, post_id: str) -> None:
         # 物理删除
         stmt = delete(PostPO).where(PostPO.id == post_id)
         self.session.execute(stmt)
-        # 移除显式 flush
+        self.session.flush() # Explicit flush to avoid pending state issues
 
     def exists(self, post_id: str) -> bool:
         stmt = select(exists().where(PostPO.id == post_id))

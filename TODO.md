@@ -66,6 +66,21 @@ PS D:\学业\CODE_PROJECTS\Trae\数据库及计网课设\travel_sharing>
 
 
 
+
+在 backend 目录下创建一个 scripts/init_db_data.py 脚本，正常使用 session.commit() 来插入测试数据。
+# 伪代码示例
+session = Session()
+user = User(...)
+repo.save(user)
+session.commit() # 这会让数据持久化
+print("数据已写入")
+
+
+
+
+
+
+
 I need you to analyze my current backend codebase to prepare for the frontend development phase. Based on the existing implementation, please expand and refine the following prompt. The goal is to generate a detailed "Master Prompt" that I will use to build the React.js frontend.
 
 Your Task:

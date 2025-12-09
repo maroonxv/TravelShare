@@ -132,7 +132,8 @@ class PostPO(Base):
     # 内容
     title = Column(String(200), nullable=False)
     text = Column(Text, nullable=False)
-    # images 和 tags 现已通过关联表实现
+    images_json = Column(Text, nullable=True)
+    tags_json = Column(Text, nullable=True)
     
     # 元数据
     visibility = Column(String(20), nullable=False, default='public')
@@ -194,6 +195,8 @@ class PostPO(Base):
             created_at=post.created_at,
             updated_at=post.updated_at
         )
+        po.images_json = json.dumps(list(post.content.images)) if post.content.images else '[]'
+        po.tags_json = json.dumps(list(post.content.tags)) if post.content.tags else '[]'
         
         # 处理关联对象
         po.images = [
@@ -215,6 +218,8 @@ class PostPO(Base):
         self.trip_id = post.trip_id
         self.is_deleted = post.is_deleted
         self.updated_at = post.updated_at
+        self.images_json = json.dumps(list(post.content.images)) if post.content.images else '[]'
+        self.tags_json = json.dumps(list(post.content.tags)) if post.content.tags else '[]'
         
         # 更新图片：直接替换集合，利用 cascade='all, delete-orphan'
         self.images = [

@@ -88,3 +88,138 @@ class TestTripRepositoryIntegration:
         # Assert
         found_ids = [t.id.value for t in trips]
         assert t1_id in found_ids
+
+    def test_delete_trip(self, trip_repo):
+        # Arrange
+        trip_id = str(uuid.uuid4())
+        creator_id = str(uuid.uuid4())
+        trip = Trip.reconstitute(
+            trip_id=TripId(trip_id),
+            name=TripName("To Delete"),
+            description=TripDescription(""),
+            creator_id=creator_id,
+            date_range=DateRange(date.today(), date.today()),
+            members=[], days=[], budget=None,
+            visibility=TripVisibility.PUBLIC, status=TripStatus.PLANNING,
+            created_at=datetime.utcnow(), updated_at=datetime.utcnow()
+        )
+        trip_repo.save(trip)
+        assert trip_repo.find_by_id(trip.id) is not None
+
+        # Act
+        trip_repo.delete(trip.id)
+
+        # Assert
+        assert trip_repo.find_by_id(trip.id) is None
+
+    def test_find_by_creator(self, trip_repo):
+        # Arrange
+        creator_id = str(uuid.uuid4())[:36]
+        other_creator = str(uuid.uuid4())[:36]
+        
+        t1 = Trip.reconstitute(
+            trip_id=TripId(str(uuid.uuid4())),
+            name=TripName("Creator Trip 1"),
+            description=TripDescription(""),
+            creator_id=creator_id,
+            date_range=DateRange(date.today(), date.today()),
+            members=[], days=[], budget=None,
+            visibility=TripVisibility.PUBLIC, status=TripStatus.PLANNING,
+            created_at=datetime.utcnow(), updated_at=datetime.utcnow()
+        )
+        t2 = Trip.reconstitute(
+            trip_id=TripId(str(uuid.uuid4())),
+            name=TripName("Other Trip"),
+            description=TripDescription(""),
+            creator_id=other_creator,
+            date_range=DateRange(date.today(), date.today()),
+            members=[], days=[], budget=None,
+            visibility=TripVisibility.PUBLIC, status=TripStatus.PLANNING,
+            created_at=datetime.utcnow(), updated_at=datetime.utcnow()
+        )
+        trip_repo.save(t1)
+        trip_repo.save(t2)
+
+        # Act
+        found = trip_repo.find_by_creator(creator_id)
+
+        # Assert
+        found_ids = [t.id.value for t in found]
+        assert t1.id.value in found_ids
+        assert t2.id.value not in found_ids
+
+    def test_find_public_pagination(self, trip_repo):
+        # Arrange
+        # Create 3 public trips
+        prefix = str(uuid.uuid4())[:8]
+        trips = []
+        for i in range(3):
+            t = Trip.reconstitute(
+                trip_id=TripId(str(uuid.uuid4())),
+                name=TripName(f"Public {prefix} {i}"),
+                description=TripDescription(""),
+                creator_id=str(uuid.uuid4())[:36],
+                date_range=DateRange(date.today(), date.today()),
+                members=[], days=[], budget=None,
+                visibility=TripVisibility.PUBLIC, status=TripStatus.PLANNING,
+                created_at=datetime.utcnow(), updated_at=datetime.utcnow()
+            )
+            trip_repo.save(t)
+            trips.append(t)
+            
+        # Create 1 private trip
+        private_t = Trip.reconstitute(
+            trip_id=TripId(str(uuid.uuid4())),
+            name=TripName(f"Private {prefix}"),
+            description=TripDescription(""),
+            creator_id=str(uuid.uuid4())[:36],
+            date_range=DateRange(date.today(), date.today()),
+            members=[], days=[], budget=None,
+            visibility=TripVisibility.PRIVATE, status=TripStatus.PLANNING,
+            created_at=datetime.utcnow(), updated_at=datetime.utcnow()
+        )
+        trip_repo.save(private_t)
+
+        # Act & Assert
+        # Check pagination
+        page1 = trip_repo.find_public(limit=1, offset=0)
+        assert len(page1) == 1
+        
+        # Check that private trip is not returned
+        # Fetch a large enough page to cover likely recent inserts
+        # Or better, check specific IDs if we can, but find_public doesn't filter by other things easily.
+        # But we can verify that returned trips are all public.
+        
+        public_trips = trip_repo.find_public(limit=100)
+        for t in public_trips:
+            assert t.visibility == TripVisibility.PUBLIC
+            
+        # Verify our private trip is NOT in the list
+        public_ids = [t.id.value for t in public_trips]
+        assert private_t.id.value not in public_ids
+        
+        # Verify at least one of our public trips is there
+        # (Assuming test DB doesn't have thousands of recent trips pushing it off page 1)
+        # Since we use a shared DB, we can't guarantee, but usually fine for integration tests.
+        found_any = any(t.id.value in public_ids for t in trips)
+        assert found_any
+
+    def test_exists(self, trip_repo):
+        # Arrange
+        trip_id = str(uuid.uuid4())
+        trip = Trip.reconstitute(
+            trip_id=TripId(trip_id),
+            name=TripName("Exists Check"),
+            description=TripDescription(""),
+            creator_id=str(uuid.uuid4())[:36],
+            date_range=DateRange(date.today(), date.today()),
+            members=[], days=[], budget=None,
+            visibility=TripVisibility.PUBLIC, status=TripStatus.PLANNING,
+            created_at=datetime.utcnow(), updated_at=datetime.utcnow()
+        )
+        trip_repo.save(trip)
+
+        # Act & Assert
+        assert trip_repo.exists(TripId(trip_id))
+        assert not trip_repo.exists(TripId(str(uuid.uuid4())))
+

@@ -116,6 +116,15 @@ class SqlAlchemyConversationDao(IConversationDao):
         self.session.flush()
 
     def delete(self, conversation_id: str) -> None:
+        # First delete participants association
+        stmt_participants = delete(conversation_participants).where(
+            conversation_participants.c.conversation_id == conversation_id
+        )
+        self.session.execute(stmt_participants)
+        
+        # Messages should be deleted by cascade if configured correctly, 
+        # but MessageDAO.delete_by_conversation might be called by repo.
+        # Here we just delete the conversation itself.
         stmt = delete(ConversationPO).where(ConversationPO.id == conversation_id)
         self.session.execute(stmt)
         self.session.flush()

@@ -5,6 +5,7 @@
 负责领域模型与持久化模型之间的转换。
 """
 from typing import List, Optional
+from sqlalchemy.exc import IntegrityError
 
 from app_auth.domain.demand_interface.i_user_repository import IUserRepository
 from app_auth.domain.entity.user_entity import User
@@ -30,6 +31,16 @@ class UserRepositoryImpl(IUserRepository):
         Args:
             user: 用户聚合根
         """
+        # Check for duplicates explicitly to ensure data integrity
+        # independent of DB constraints (or if they are missing in test env)
+        existing_by_email = self.find_by_email(user.email)
+        if existing_by_email and existing_by_email.id != user.id:
+            raise IntegrityError("Duplicate email", None, Exception(f"Email {user.email.value} already exists"))
+
+        existing_by_username = self.find_by_username(user.username)
+        if existing_by_username and existing_by_username.id != user.id:
+            raise IntegrityError("Duplicate username", None, Exception(f"Username {user.username.value} already exists"))
+
         existing_po = self._user_dao.find_by_id(user.id.value)
         
         if existing_po:
