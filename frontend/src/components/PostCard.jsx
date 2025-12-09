@@ -1,0 +1,57 @@
+import { Link } from 'react-router-dom';
+import { Heart, MessageCircle, MapPin } from 'lucide-react';
+import Card from './Card';
+import styles from './PostCard.module.css';
+
+const PostCard = ({ post }) => {
+    return (
+        <Card className={styles.postCard}>
+            <div className={styles.header}>
+                <div className={styles.userInfo}>
+                    <div className={styles.avatar}>{post.author_name?.charAt(0).toUpperCase()}</div>
+                    <span className={styles.username}>{post.author_name}</span>
+                </div>
+                <span className={styles.date}>{new Date(post.created_at).toLocaleDateString()}</span>
+            </div>
+
+            {post.image_url && (
+                <div className={styles.imageContainer}>
+                    <img src={post.image_url} alt={post.title} className={styles.image} />
+                </div>
+            )}
+
+            <div className={styles.content}>
+                <Link to={`/social/post/${post.id}`} className={styles.titleLink}>
+                    <h3 className={styles.title}>{post.title || 'Untitled Post'}</h3>
+                </Link>
+                <p className={styles.text}>{post.content}</p>
+
+                {post.trip_id && (
+                    <div className={styles.tripLink}>
+                        <MapPin size={16} />
+                        <span>Linked Trip: {post.trip_name || 'View Trip'}</span>
+                    </div>
+                )}
+
+                {post.tags && post.tags.length > 0 && (
+                    <div className={styles.tags}>
+                        {post.tags.map((tag, idx) => <span key={idx} className={styles.tag}>#{tag}</span>)}
+                    </div>
+                )}
+            </div>
+
+            <div className={styles.actions}>
+                <button className={styles.actionBtn}>
+                    <Heart size={20} />
+                    <span>{post.likes_count || 0}</span>
+                </button>
+                <Link to={`/social/post/${post.id}`} className={styles.actionBtn}>
+                    <MessageCircle size={20} />
+                    <span>{post.comments_count || 0}</span>
+                </Link>
+            </div>
+        </Card>
+    );
+};
+
+export default PostCard;

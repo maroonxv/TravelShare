@@ -81,7 +81,7 @@ print("数据已写入")
 
 
 
-I need you to analyze my current backend codebase to prepare for the frontend development phase. Based on the existing implementation, please expand and refine the following prompt. The goal is to generate a detailed "Master Prompt" that I will use to build the React.js frontend.
+I need you to analyze my current backend codebase to prepare for the frontend development phase. Based on the existing implementation, please expand and refine the following prompt. The goal is to generate a detailed "Master Prompt" that I will use to build the React.js frontend. But remember that this is only a personal project and only I will be working on it. So don't make it too complicated (don't use threaded comments and indinite scroll).
 
 Your Task:
 Review the project structure, specifically the Domain-Driven Design (DDD) implementation across app_auth, app_social, and app_travel. Then, rewrite the draft prompt below to be extremely specific.
@@ -109,3 +109,110 @@ Output format:
 Please provide only the refined, comprehensive prompt text, ready for me to execute.
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Master Prompt: React.js Frontend for "Travel Sharing" App
+Role: You are an expert React.js developer and UI/UX designer. Your task is to build the complete frontend for the "Travel Sharing" application, a personal project built with Domain-Driven Design (DDD) principles.
+
+Constraint Checklist & Confidence Score:
+
+Use React.js? Yes.
+Use "Dark Mode" with specific neon accents? Yes.
+No infinite scroll? Yes (Use simple pagination).
+No threaded comments? Yes (Use flat list).
+Confidence Score: 5/5
+1. Project Overview & Backend Capabilities
+The backend is fully implemented in Python (Flask) with three bounded contexts. You must strictly adhere to the following API contracts:
+
+A. Auth Context (/api/auth)
+Base URL: /api/auth
+Endpoints:
+POST /register: Payload {username, email, password, role}.
+POST /login: Payload {email, password}.
+POST /logout: Clears session.
+GET /me: Returns current user {id, username, email, role, profile: {avatar_url, bio, location}}.
+POST /change-password: Payload {old_password, new_password}.
+B. Social Context (/api/social)
+Base URL: /api/social
+Features:
+Feed: GET /feed?limit=20&offset=0. Returns a list of posts.
+Posts:
+POST /posts: Supports Multipart/Form-Data (for media_files) or JSON. Fields: title, content, tags, visibility, trip_id.
+GET /posts/:id: Returns post details.
+PUT /posts/:id & DELETE /posts/:id.
+Interactions: POST /posts/:id/like, POST /posts/:id/comments (Simple flat comment structure).
+Messaging:
+GET /conversations: List private chats.
+GET/POST /conversations/:id/messages: View and send messages.
+C. Travel Context (/api/travel)
+Base URL: /api/travel
+Features:
+Trip Management:
+POST /trips: Create trip {name, start_date, end_date, budget_amount, ...}.
+GET /trips/:id: Full trip details including days, members, and budget.
+GET /trips/public: Public trip gallery.
+Itinerary Management:
+The backend automatically calculates transits. The frontend simply displays the transits array returned in the day object.
+POST /trips/:id/days/:index/activities: Add activity {name, activity_type, location_name, start_time, end_time, ...}.
+2. Design System: "Neon Nights"
+The app must be visually distinct for each context, using a Dark Mode foundation.
+
+Backgrounds: Deep Charcoal (#121212) for main pages, Midnight Blue (#1e293b) for cards/modals.
+Text: White (#f8fafc) for headers, Slate Gray (#94a3b8) for body text.
+Context Colors (Use for buttons, active tabs, and borders):
+Auth: Electric Purple (#d946ef) – Login/Register screens.
+Social: Neon Teal (#2dd4bf) – Feeds, profiles, and chat.
+Travel: Sunset Orange (#f97316) – Itineraries and bookings.
+3. Page Specifications
+Please implement the following pages. Keep interactions simple (no complex animations).
+
+Auth Module
+Login/Register: Simple forms with validation. On success, store user info and redirect to Social Feed.
+User Profile: Display avatar, bio, and location. Include a "Change Password" form.
+Social Module
+Global Feed:
+Display posts in a vertical list.
+Pagination: Use a simple "Load More" button (No infinite scroll).
+Post Card: Show Title, Author, Content snippet, Tags, and "Linked Trip" (if any).
+Create Post:
+A form to upload images, write text, and optionally select one of the user's trips (fetch from /api/travel/users/:my_id/trips) to link.
+Post Detail:
+Full content view.
+Comments: A simple flat list of comments at the bottom.
+Chat Interface:
+Split view: Left side = List of conversations. Right side = Message history.
+Travel Module
+Public Trips Gallery: Grid view of trips created by other users (GET /trips/public).
+My Trips Dashboard: List of trips I created or joined.
+Trip Detail & Itinerary (The Core Feature):
+Header: Trip Name, Dates, Budget, and Member list.
+Day Tabs: Horizontal tabs to switch between Day 1, Day 2, etc.
+Timeline View: For the selected day, display a vertical timeline of:
+Activity: Time, Name, Location, Cost.
+Transit: (Rendered between activities) Mode, Duration, Distance. (Data comes from backend transits array).
+Add Activity Form: A modal to add an activity to the current day. Fields: Name, Type (Sightseeing/Food/etc), Start/End Time, Location Name.
+4. Technical Requirements
+Stack: React.js (CRA or Vite), Axios, React Router v6.
+State: Use Context API for User Auth state. Use local state (useState) for everything else to keep it simple.
+Styling: Plain CSS Modules or Styled Components. Do not use heavy UI libraries; build simple custom components matching the "Neon Nights" theme.
+Deliverable: Please generate the project structure and the code for the key components and pages described above.

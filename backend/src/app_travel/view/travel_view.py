@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, g, current_app
+from flask import Blueprint, request, jsonify, g, current_app, session
 from datetime import datetime, date, time
 from decimal import Decimal
 import traceback
@@ -209,6 +209,36 @@ def delete_trip(trip_id):
         return jsonify({'error': 'Trip not found'}), 404
         
     return '', 204
+
+@travel_bp.route('/trips/<trip_id>/members', methods=['POST'])
+def add_member(trip_id):
+    """添加成员"""
+    data = request.get_json()
+    if not data or 'user_id' not in data:
+        return jsonify({'error': 'user_id is required'}), 400
+        
+    service = get_travel_service()
+    
+    # 尝试从 session 获取当前用户 ID作为 added_by
+    current_user_id = session.get('user_id')
+    
+    try:
+        trip = service.add_member(
+            trip_id=trip_id,
+            user_id=data['user_id'],
+            role=data.get('role', 'member'),
+            added_by=current_user_id
+        )
+        
+        if not trip:
+            return jsonify({'error': 'Trip not found'}), 404
+            
+        return jsonify(serialize_trip(trip)), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
 
 @travel_bp.route('/users/<user_id>/trips', methods=['GET'])
 def list_user_trips(user_id):

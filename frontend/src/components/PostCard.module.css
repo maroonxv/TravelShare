@@ -1,0 +1,130 @@
+.postCard {
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.userInfo {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--color-social);
+    color: #121212;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.username {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.date {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.imageContainer {
+    width: 100%;
+    height: 250px;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-md);
+    background-color: #000;
+}
+
+.image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+
+.image:hover {
+    transform: scale(1.02);
+}
+
+.content {
+    margin-bottom: var(--spacing-lg);
+}
+
+.titleLink {
+    text-decoration: none;
+}
+
+.title {
+    margin: 0 0 var(--spacing-sm);
+    color: var(--text-primary);
+    font-size: 1.25rem;
+    transition: color 0.2s;
+}
+
+.title:hover {
+    color: var(--color-social);
+}
+
+.text {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0 0 var(--spacing-md);
+}
+
+.tripLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    background-color: rgba(249, 115, 22, 0.1);
+    color: var(--color-travel);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tag {
+    color: var(--color-social);
+    font-size: 0.85rem;
+}
+
+.actions {
+    display: flex;
+    gap: var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+    padding-top: var(--spacing-md);
+}
+
+.actionBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    transition: color 0.2s;
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+}
+
+.actionBtn:hover {
+    color: var(--color-social);
+    background-color: rgba(45, 212, 191, 0.1);
+}
