@@ -13,7 +13,8 @@ from app_social.infrastructure.database.dao_impl.sqlalchemy_post_dao import SqlA
 from app_social.infrastructure.database.dao_impl.sqlalchemy_conversation_dao import SqlAlchemyConversationDao
 from app_social.infrastructure.database.persistent_model.conversation_po import ConversationPO
 from app_social.infrastructure.database.persistent_model.message_po import MessagePO
-from sqlalchemy import delete
+from app_travel.infrastructure.database.persistent_model.trip_po import TripDayPO, TripMemberPO, ActivityPO, TransitPO
+from sqlalchemy import delete, select
 
 # Hardcoded IDs for predictability
 USER1_ID = "11111111-1111-1111-1111-111111111111"
@@ -65,6 +66,29 @@ def delete_data():
         # 3. Delete Trip
         trip_dao = SqlAlchemyTripDao(session)
         if trip_dao.find_by_id(TRIP_ID):
+            # Manually delete Trip dependencies to avoid foreign key constraints
+            # 1. TripMembers
+            stmt = delete(TripMemberPO).where(TripMemberPO.trip_id == TRIP_ID)
+            session.execute(stmt)
+            
+            # 2. TripDays and their Activities/Transits
+            # Get all trip day IDs
+            stmt = select(TripDayPO.id).where(TripDayPO.trip_id == TRIP_ID)
+            trip_day_ids = session.execute(stmt).scalars().all()
+            
+            if trip_day_ids:
+                # Delete Activities
+                stmt = delete(ActivityPO).where(ActivityPO.trip_day_id.in_(trip_day_ids))
+                session.execute(stmt)
+                
+                # Delete Transits
+                stmt = delete(TransitPO).where(TransitPO.trip_day_id.in_(trip_day_ids))
+                session.execute(stmt)
+                
+                # Delete TripDays
+                stmt = delete(TripDayPO).where(TripDayPO.trip_id == TRIP_ID)
+                session.execute(stmt)
+
             trip_dao.delete(TRIP_ID)
             print(f"Deleted Trip: {TRIP_ID}")
         else:
