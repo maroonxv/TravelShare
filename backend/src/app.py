@@ -17,6 +17,7 @@ from app_travel.infrastructure.database.persistent_model.trip_po import TripPO, 
 from app_travel.view.travel_view import travel_bp
 from app_social.view.social_view import social_bp
 from app_auth.view.auth_view import auth_bp
+from app_admin import admin_bp
 
 def create_app():
     # 配置静态文件目录
@@ -41,6 +42,7 @@ def create_app():
     app.register_blueprint(travel_bp)
     app.register_blueprint(social_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp)
     
     @app.route('/health')
     def health_check():

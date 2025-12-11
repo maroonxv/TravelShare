@@ -20,6 +20,10 @@ import MyTripsPage from './pages/travel/MyTripsPage';
 import PublicTripsPage from './pages/travel/PublicTripsPage';
 import TripDetailPage from './pages/travel/TripDetailPage';
 
+// Admin
+import AdminLayout from './admin/components/AdminLayout';
+import AdminResourcePage from './admin/pages/AdminResourcePage';
+
 function App() {
   return (
     <Router>
@@ -29,6 +33,12 @@ function App() {
           <Route path="/auth/login" element={<LoginPage />} />
           <Route path="/auth/register" element={<RegisterPage />} />
           <Route path="/" element={<Navigate to="/social" replace />} />
+
+          {/* Admin Routes */}
+          <Route path="/admin" element={<AdminLayout />}>
+             <Route index element={<Navigate to="users" replace />} />
+             <Route path=":resourceName" element={<AdminResourcePage />} />
+          </Route>
 
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>

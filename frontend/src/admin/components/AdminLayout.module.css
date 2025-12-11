@@ -1,0 +1,110 @@
+.container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background: transparent;
+}
+
+.sidebar {
+    width: 240px;
+    background: rgba(5, 8, 22, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacing-md);
+    flex-shrink: 0;
+    z-index: 10;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xl);
+    padding: 0 var(--spacing-sm);
+    background: linear-gradient(135deg, #F59E0B, #EF4444); /* 区别于前台的颜色 */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.3));
+}
+
+.nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    flex: 1;
+    overflow-y: auto;
+}
+
+.link {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+    font-weight: 500;
+    border: 1px solid transparent;
+    text-decoration: none;
+}
+
+.link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
+}
+
+.active {
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), transparent);
+    color: #F59E0B;
+    border-left: 2px solid #F59E0B;
+    text-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+.footer {
+    margin-top: auto;
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+}
+
+.backBtn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    width: 100%;
+    padding: var(--spacing-md);
+    color: var(--text-secondary);
+    border-radius: var(--radius-md);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.backBtn:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+}
+
+.main {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-xl);
+    position: relative;
+}
+
+/* 简单的访问拒绝样式 */
+.accessDenied {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+}
