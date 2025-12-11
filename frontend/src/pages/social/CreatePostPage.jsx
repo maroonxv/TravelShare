@@ -17,8 +17,8 @@ const CreatePostPage = () => {
     const [tags, setTags] = useState('');
     const [selectedTrip, setSelectedTrip] = useState('');
     const [visibility, setVisibility] = useState('public');
-    const [image, setImage] = useState(null);
-    const [preview, setPreview] = useState(null);
+    const [images, setImages] = useState([]);
+    const [previews, setPreviews] = useState([]);
     const [myTrips, setMyTrips] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -26,6 +26,9 @@ const CreatePostPage = () => {
         if (user) {
             fetchTrips();
         }
+        return () => {
+            previews.forEach(url => URL.revokeObjectURL(url));
+        };
     }, [user]);
 
     const fetchTrips = async () => {
@@ -38,16 +41,22 @@ const CreatePostPage = () => {
     };
 
     const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setImage(file);
-            setPreview(URL.createObjectURL(file));
+        const files = Array.from(e.target.files);
+        if (files.length > 0) {
+            setImages(prev => [...prev, ...files]);
+            const newPreviews = files.map(file => URL.createObjectURL(file));
+            setPreviews(prev => [...prev, ...newPreviews]);
         }
     };
 
-    const removeImage = () => {
-        setImage(null);
-        setPreview(null);
+    const removeImage = (index) => {
+        setImages(prev => prev.filter((_, i) => i !== index));
+        setPreviews(prev => {
+            const newPreviews = [...prev];
+            URL.revokeObjectURL(newPreviews[index]);
+            newPreviews.splice(index, 1);
+            return newPreviews;
+        });
     };
 
     const handleSubmit = async (e) => {
@@ -57,10 +66,13 @@ const CreatePostPage = () => {
         const formData = new FormData();
         formData.append('title', title);
         formData.append('content', content);
-        formData.append('tags', tags); // Backend should handle comma separated or JSON
-        formData.append('visibility', visibility); // public, private, friends
+        formData.append('tags', tags);
+        formData.append('visibility', visibility);
         if (selectedTrip) formData.append('trip_id', selectedTrip);
-        if (image) formData.append('media_files', image); // "media_files" as per spec
+        
+        images.forEach(image => {
+            formData.append('media_files', image);
+        });
 
         try {
             await createPost(formData);
@@ -96,28 +108,44 @@ const CreatePostPage = () => {
                         />
                     </div>
 
-                    {preview ? (
-                        <div className={styles.imagePreview}>
-                            <img src={preview} alt="Preview" />
-                            <button type="button" className={styles.removeBtn} onClick={removeImage}>
-                                <X size={16} />
-                            </button>
-                        </div>
-                    ) : (
-                        <div className={styles.uploadArea}>
-                            <label htmlFor="image-upload" className={styles.uploadLabel}>
-                                <ImageIcon size={24} />
-                                <span>添加照片</span>
-                            </label>
-                            <input
-                                id="image-upload"
-                                type="file"
-                                accept="image/*"
-                                onChange={handleImageChange}
-                                style={{ display: 'none' }}
-                            />
+                    {previews.length > 0 && (
+                        <div className={styles.imagePreviewGrid} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px', marginBottom: '20px' }}>
+                            {previews.map((url, index) => (
+                                <div key={index} style={{ position: 'relative', aspectRatio: '1/1' }}>
+                                    <img src={url} alt={`Preview ${index}`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                                    <button 
+                                        type="button" 
+                                        onClick={() => removeImage(index)}
+                                        style={{ 
+                                            position: 'absolute', top: -5, right: -5, 
+                                            background: 'red', color: 'white', 
+                                            border: 'none', borderRadius: '50%', 
+                                            width: '20px', height: '20px', 
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                </div>
+                            ))}
                         </div>
                     )}
+
+                    <div className={styles.uploadArea}>
+                        <label htmlFor="image-upload" className={styles.uploadLabel}>
+                            <ImageIcon size={24} />
+                            <span>添加照片</span>
+                        </label>
+                        <input
+                            id="image-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            multiple
+                            style={{ display: 'none' }}
+                        />
+                    </div>
 
                     <div className={styles.row}>
                         <div className={styles.selectWrapper}>

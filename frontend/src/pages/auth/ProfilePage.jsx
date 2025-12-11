@@ -9,11 +9,12 @@ import TripCard from '../../components/TripCard';
 import { getUserPosts, getUserProfile } from '../../api/social';
 import { getUserTrips } from '../../api/travel';
 import { User, MapPin, Mail, Shield, Settings } from 'lucide-react';
+import FriendActionButton from '../../components/FriendActionButton';
 
 const ProfilePage = () => {
     const { user: currentUser } = useAuth();
     const { userId } = useParams();
-    
+
     const [viewUser, setViewUser] = useState(null);
     const [posts, setPosts] = useState([]);
     const [trips, setTrips] = useState([]);
@@ -30,7 +31,7 @@ const ProfilePage = () => {
 
                 if (!targetUserId) {
                     setLoading(false);
-                    return; 
+                    return;
                 }
 
                 if (isOwnProfile) {
@@ -38,7 +39,7 @@ const ProfilePage = () => {
                 } else {
                     targetUser = await getUserProfile(userId);
                 }
-                
+
                 setViewUser(targetUser);
 
                 if (targetUser) {
@@ -75,6 +76,15 @@ const ProfilePage = () => {
                 <div className={styles.userInfo}>
                     <h1>{viewUser.username}</h1>
                     <p className={styles.role}>{viewUser.role}</p>
+
+                    {!isOwnProfile && (
+                        <div className={styles.actionButtons}>
+                            <FriendActionButton
+                                targetUserId={viewUser.id}
+                                initialStatus={viewUser.friendship}
+                            />
+                        </div>
+                    )}
                 </div>
                 {isOwnProfile && (
                     <div style={{ marginLeft: 'auto' }}>

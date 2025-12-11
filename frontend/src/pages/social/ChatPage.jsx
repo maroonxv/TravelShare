@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getConversations, getMessages, sendMessage } from '../../api/social';
+import FriendRequestsList from '../../components/FriendRequestsList';
 import { useAuth } from '../../context/AuthContext';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
@@ -75,6 +76,13 @@ const ChatPage = () => {
         <div className={styles.container}>
             <Card className={styles.sidebar} contentClassName={styles.cardContent} title="消息列表">
                 <div className={styles.conversationList}>
+                    {/* Friend Requests Section */}
+                    <div className={styles.requestsSection}>
+                        <h4 style={{ padding: '0 10px', fontSize: '0.9em', color: '#888' }}>好友请求</h4>
+                        <FriendRequestsList />
+                    </div>
+
+                    <h4 style={{ padding: '10px 10px 0', fontSize: '0.9em', color: '#888' }}>会话</h4>
                     {loading && <div className={styles.loading}>加载中...</div>}
                     {!loading && conversations.length === 0 && (
                         <div className={styles.emptyState}>暂无会话</div>

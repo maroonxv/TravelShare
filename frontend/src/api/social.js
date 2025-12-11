@@ -56,6 +56,11 @@ export const getConversations = async () => {
     return response.data;
 };
 
+export const createConversation = async (targetUserId) => {
+    const response = await client.post('/social/conversations', { target_user_id: targetUserId });
+    return response.data;
+};
+
 export const getMessages = async (conversationId) => {
     const response = await client.get(`/social/conversations/${conversationId}/messages`);
     return response.data;
@@ -68,5 +73,37 @@ export const sendMessage = async (conversationId, content) => {
 
 export const getUserProfile = async (userId) => {
     const response = await client.get(`/auth/users/${userId}`);
+    return response.data;
+};
+
+// ==================== Friend APIs ====================
+
+export const sendFriendRequest = async (targetUserId) => {
+    const response = await client.post('/social/friends/requests', { target_user_id: targetUserId });
+    return response.data;
+};
+
+export const getFriendRequests = async (type = 'incoming') => {
+    const response = await client.get(`/social/friends/requests?type=${type}`);
+    return response.data;
+};
+
+export const acceptFriendRequest = async (requestId) => {
+    const response = await client.put(`/social/friends/requests/${requestId}/accept`);
+    return response.data;
+};
+
+export const rejectFriendRequest = async (requestId) => {
+    const response = await client.put(`/social/friends/requests/${requestId}/reject`);
+    return response.data;
+};
+
+export const getFriends = async () => {
+    const response = await client.get('/social/friends');
+    return response.data;
+};
+
+export const getFriendshipStatus = async (targetUserId) => {
+    const response = await client.get(`/social/friends/${targetUserId}/status`);
     return response.data;
 };

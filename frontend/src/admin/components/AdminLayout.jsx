@@ -30,7 +30,7 @@ const AdminLayout = () => {
     return (
         <div className={styles.container}>
             <aside className={styles.sidebar}>
-                <div className={styles.logo}>Admin Panel</div>
+                <div className={styles.logo}>Admin</div>
                 <nav className={styles.nav}>
                     {Object.keys(resources).map(key => {
                         const Icon = iconMap[key] || LayoutGrid;

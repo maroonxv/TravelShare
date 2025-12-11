@@ -98,27 +98,34 @@ export const resources = {
         label: "活动管理",
         columns: [
             { key: 'id', label: 'ID' },
-            { key: 'title', label: '标题' },
+            { key: 'name', label: '名称' },
             { key: 'trip_day_id', label: '日程ID' }
         ],
         fields: [
-            { name: 'title', label: '标题', type: 'text', required: true },
-            { name: 'description', label: '描述', type: 'textarea' },
-            { name: 'start_time', label: '开始时间', type: 'datetime-local' },
-            { name: 'end_time', label: '结束时间', type: 'datetime-local' }
+            { name: 'name', label: '名称', type: 'text', required: true },
+            { name: 'activity_type', label: '类型', type: 'select', options: ['sightseeing', 'food', 'shopping', 'accommodation', 'other'] },
+            { name: 'location_name', label: '地点名称', type: 'text' },
+            { name: 'start_time', label: '开始时间', type: 'time' },
+            { name: 'end_time', label: '结束时间', type: 'time' },
+            { name: 'cost_amount', label: '费用', type: 'number' },
+            { name: 'notes', label: '备注', type: 'textarea' }
         ]
     },
     transits: {
         label: "交通管理",
         columns: [
             { key: 'id', label: 'ID' },
-            { key: 'type', label: '类型' },
+            { key: 'transport_mode', label: '交通方式' },
             { key: 'trip_day_id', label: '日程ID' }
         ],
         fields: [
-            { name: 'type', label: '类型', type: 'text', required: true },
-            { name: 'start_time', label: '出发时间', type: 'datetime-local' },
-            { name: 'end_time', label: '到达时间', type: 'datetime-local' }
+            { name: 'transport_mode', label: '交通方式', type: 'select', options: ['flight', 'train', 'bus', 'driving', 'walking', 'cycling', 'ferry', 'subway', 'taxi', 'other'], required: true },
+            { name: 'from_activity_id', label: '出发活动ID', type: 'text', required: true },
+            { name: 'to_activity_id', label: '到达活动ID', type: 'text', required: true },
+            { name: 'departure_time', label: '出发时间', type: 'time', required: true },
+            { name: 'arrival_time', label: '到达时间', type: 'time', required: true },
+            { name: 'cost_amount', label: '费用', type: 'number' },
+            { name: 'notes', label: '备注', type: 'textarea' }
         ]
     },
     trip_days: {

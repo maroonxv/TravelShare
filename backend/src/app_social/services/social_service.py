@@ -435,6 +435,22 @@ class SocialService:
             if existing:
                 return {"conversation_id": existing.id.value, "is_new": False}
             
+            # Enforce Friendship Requirement: defined in task requirement 4
+            # "Only become friends can chat"
+            # We need to check friendship status.
+            # Using FriendshipRepository (Lazy load or import)
+            from app_social.infrastructure.database.dao_impl.sqlalchemy_friendship_dao import SqlAlchemyFriendshipDao
+            from app_social.infrastructure.database.repository_impl.friendship_repository_impl import FriendshipRepositoryImpl
+            from app_social.domain.value_objects.friendship_value_objects import FriendshipStatus
+            
+            friend_dao = SqlAlchemyFriendshipDao(session)
+            friend_repo = FriendshipRepositoryImpl(friend_dao)
+            friendship = friend_repo.find_by_users(user1_id, user2_id)
+            
+            if not friendship or friendship.status != FriendshipStatus.ACCEPTED:
+                 # Be strict?
+                 raise ValueError("Cannot create chat. You are not friends.")
+            
             conv = Conversation.create_private(user1_id, user2_id)
             
             conv_repo.save(conv)
