@@ -183,11 +183,19 @@ def add_comment(post_id):
 def get_feed():
     """获取公开流"""
     try:
+        # 尝试获取当前用户ID，以便判断是否点赞
+        try:
+            user_id = _get_current_user_id()
+        except ValueError:
+            user_id = None
+            
         limit = int(request.args.get('limit', 20))
         offset = int(request.args.get('offset', 0))
         tags = request.args.getlist('tags')
         
-        result = social_service.get_public_feed(limit, offset, tags)
+        # 此时 get_public_feed 还不支持 user_id 参数，需要修改 service
+        # 我们先修改 view，然后去修改 service
+        result = social_service.get_public_feed(limit, offset, tags, viewer_id=user_id)
         return jsonify(result), 200
     except Exception as e:
         return _handle_error(e)

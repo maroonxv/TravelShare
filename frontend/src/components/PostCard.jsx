@@ -90,7 +90,7 @@ const PostCard = ({ post, onDelete }) => {
                     <div className={styles.tripLink}>
                         <MapPin size={16} />
                         {post.trip.is_public ? (
-                            <Link to={`/trips/${post.trip.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                            <Link to={`/travel/trips/${post.trip.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                                 关联旅行: {post.trip.title}
                             </Link>
                         ) : (

@@ -7,10 +7,14 @@ const TripCard = ({ trip }) => {
     return (
         <Card className={styles.card}>
             <div className={styles.imageContainer}>
-                {/* Default image if none provided */}
-                <div className={styles.imagePlaceholder}>
-                    {trip.name?.charAt(0).toUpperCase()}
-                </div>
+                {trip.cover_image_url ? (
+                    <img src={trip.cover_image_url} alt={trip.name} className={styles.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                    /* Default image if none provided */
+                    <div className={styles.imagePlaceholder}>
+                        {trip.name?.charAt(0).toUpperCase()}
+                    </div>
+                )}
             </div>
 
             <div className={styles.content}>

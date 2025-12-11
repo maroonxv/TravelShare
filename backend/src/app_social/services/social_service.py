@@ -250,7 +250,7 @@ class SocialService:
         finally:
             session.close()
 
-    def get_public_feed(self, limit: int = 20, offset: int = 0, tags: List[str] = None) -> List[Dict[str, Any]]:
+    def get_public_feed(self, limit: int = 20, offset: int = 0, tags: List[str] = None, viewer_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """获取公开帖子流"""
         session = SessionLocal()
         try:
@@ -275,7 +275,7 @@ class SocialService:
                 except Exception as e:
                     print(f"Error fetching authors: {e}")
             
-            return [self._post_to_dto(p, author_info=author_info_map.get(p.author_id)) for p in posts]
+            return [self._post_to_dto(p, viewer_id=viewer_id, author_info=author_info_map.get(p.author_id)) for p in posts]
         finally:
             session.close()
             
@@ -382,7 +382,8 @@ class SocialService:
                         trip_info = {
                             "id": trip.id.value,
                             "title": trip.name.value,
-                            "is_public": trip.visibility.value == 'public'
+                            "is_public": trip.visibility.value == 'public',
+                            "cover_image_url": trip.cover_image_url
                         }
                 except Exception as e:
                     print(f"Error fetching trip info: {e}")

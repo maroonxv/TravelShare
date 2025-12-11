@@ -96,7 +96,46 @@ const TripDetailPage = () => {
 
     return (
         <div className={styles.container}>
-            <button style={{ marginBottom: '1rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => navigate(-1)}>
+            {/* Hero Cover Image */}
+            {trip.cover_image_url && (
+                <div 
+                    style={{
+                        width: '100%',
+                        height: '300px',
+                        marginBottom: '2rem',
+                        borderRadius: '0.5rem',
+                        overflow: 'hidden',
+                        position: 'relative',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                    }}
+                >
+                    <img 
+                        src={trip.cover_image_url} 
+                        alt={trip.name} 
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                        }}
+                    />
+                    <div 
+                        style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            padding: '2rem',
+                            background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
+                            color: 'white'
+                        }}
+                    >
+                        <h1 style={{ margin: 0, fontSize: '2.5rem', fontWeight: 'bold' }}>{trip.name}</h1>
+                        <p style={{ margin: '0.5rem 0 0 0', opacity: 0.9 }}>{trip.description}</p>
+                    </div>
+                </div>
+            )}
+
+            <button style={{ marginBottom: '1rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => navigate(-1)}>
                 <ArrowLeft size={16} /> 返回
             </button>
 
