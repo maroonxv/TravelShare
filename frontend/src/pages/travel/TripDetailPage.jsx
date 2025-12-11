@@ -7,6 +7,7 @@ import AddActivityModal from './AddActivityModal';
 import EditActivityModal from './EditActivityModal';
 import AddMemberModal from './AddMemberModal';
 import TripMembersModal from './TripMembersModal';
+import EditTripModal from './EditTripModal';
 import { Calendar, Users, DollarSign, MapPin, Clock, ArrowRight, ArrowLeft, Plus, Edit2 } from 'lucide-react';
 import styles from './TripDetail.module.css';
 
@@ -20,6 +21,7 @@ const TripDetailPage = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [showAddMemberModal, setShowAddMemberModal] = useState(false);
     const [showMembersListModal, setShowMembersListModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
     const [isEditingStatus, setIsEditingStatus] = useState(false);
     const [editingActivity, setEditingActivity] = useState(null);
 
@@ -101,7 +103,18 @@ const TripDetailPage = () => {
             <div className={styles.header}>
                 <div className={styles.titleRow}>
                     <div>
-                        <h1 className={styles.title}>{trip.name}</h1>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <h1 className={styles.title}>{trip.name}</h1>
+                            {isCurrentUserAdmin && (
+                                <button 
+                                    onClick={() => setShowEditModal(true)}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+                                    title="编辑旅行信息"
+                                >
+                                    <Edit2 size={20} />
+                                </button>
+                            )}
+                        </div>
                         <div className={styles.dates}>
                             <Calendar size={18} />
                             <span>{new Date(trip.start_date).toLocaleDateString()} - {new Date(trip.end_date).toLocaleDateString()}</span>
@@ -194,18 +207,31 @@ const TripDetailPage = () => {
                         {currentDay.activities && currentDay.activities.length > 0 ? (
                             currentDay.activities.map((activity, idx) => {
                                 const transit = getTransitFrom(activity.id);
+                                const prevActivity = idx > 0 ? currentDay.activities[idx - 1] : null;
+                                const isTimeConflict = prevActivity && activity.start_time < prevActivity.end_time;
+
                                 return (
                                     <div key={`act-${idx}`}>
                                         {/* Activity Item */}
                                         <div className={styles.timelineItem}>
                                             <div className={styles.timelineParams}>
-                                                <span className={styles.time}>{activity.start_time?.slice(0, 5)}</span>
+                                                <span className={styles.time} style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
+                                                    {activity.start_time?.slice(0, 5)}
+                                                </span>
+                                                <span className={styles.time} style={{ fontSize: '0.9rem', color: '#64748b' }}>
+                                                    - {activity.end_time?.slice(0, 5)}
+                                                </span>
+                                                {isTimeConflict && (
+                                                    <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                                                        时间冲突
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className={styles.dot} />
                                             <div 
                                                 className={styles.activityCard}
                                                 onClick={() => setEditingActivity(activity)}
-                                                style={{ cursor: 'pointer' }}
+                                                style={{ cursor: 'pointer', border: isTimeConflict ? '1px solid #ef4444' : undefined }}
                                                 title="点击修改活动"
                                             >
                                                 <h4 className={styles.activityName}>{activity.name}</h4>
@@ -226,7 +252,7 @@ const TripDetailPage = () => {
                                                  <div className={styles.dot} style={{ background: 'transparent', border: 'none', display: 'flex', justifyContent: 'center' }}>
                                                     <div style={{ width: '2px', height: '100%', background: '#e2e8f0' }}></div>
                                                  </div>
-                                                 <div style={{ paddingLeft: '1rem', color: '#334155', fontSize: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                 <div style={{ paddingLeft: '1rem', color: '#fff', fontSize: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500 }}>
                                                         <ArrowRight size={16} />
                                                         <span>{TRANSIT_MODE_MAP[transit.mode] || transit.mode}</span>
@@ -234,7 +260,7 @@ const TripDetailPage = () => {
                                                         <span>{(transit.distance_meters / 1000).toFixed(1)} km</span>
                                                     </div>
                                                     {(transit.mode === 'driving' || transit.mode === 'DRIVING') && transit.cost && (
-                                                        <div style={{ fontSize: '0.9rem', color: '#64748b', marginLeft: '1.5rem' }}>
+                                                        <div style={{ fontSize: '0.9rem', color: '#94a3b8', marginLeft: '1.5rem' }}>
                                                             交通费: 5元, 油费: {transit.cost.fuel_cost || 0}元
                                                         </div>
                                                     )}
@@ -289,6 +315,14 @@ const TripDetailPage = () => {
                 <TripMembersModal
                     trip={trip}
                     onClose={() => setShowMembersListModal(false)}
+                    onSuccess={fetchTrip}
+                />
+            )}
+
+            {showEditModal && (
+                <EditTripModal
+                    trip={trip}
+                    onClose={() => setShowEditModal(false)}
                     onSuccess={fetchTrip}
                 />
             )}

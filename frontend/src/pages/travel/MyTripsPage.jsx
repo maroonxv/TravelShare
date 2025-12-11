@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getUserTrips, createTrip } from '../../api/travel';
+import { getUserTrips, createTrip, uploadTripCover } from '../../api/travel';
 import { useAuth } from '../../context/AuthContext';
 import TripCard from '../../components/TripCard';
 import Button from '../../components/Button';
@@ -20,8 +20,10 @@ const MyTripsPage = () => {
         start_date: '',
         end_date: '',
         budget_amount: '',
-        description: ''
+        description: '',
+        visibility: 'private'
     });
+    const [coverFile, setCoverFile] = useState(null);
 
     useEffect(() => {
         if (user) loadTrips();
@@ -41,13 +43,24 @@ const MyTripsPage = () => {
     const handleCreate = async (e) => {
         e.preventDefault();
         try {
-            const payload = { ...newTrip, creator_id: user.id };
+            let coverUrl = null;
+            if (coverFile) {
+                const uploadRes = await uploadTripCover(coverFile);
+                coverUrl = uploadRes.url;
+            }
+
+            const payload = { 
+                ...newTrip, 
+                creator_id: user.id,
+                cover_image_url: coverUrl
+            };
             if (!payload.budget_amount) {
                 delete payload.budget_amount;
             }
             await createTrip(payload);
             setShowModal(false);
-            setNewTrip({ name: '', start_date: '', end_date: '', budget_amount: '', description: '' });
+            setNewTrip({ name: '', start_date: '', end_date: '', budget_amount: '', description: '', visibility: 'private' });
+            setCoverFile(null);
             loadTrips(); // Refresh
         } catch (error) {
             console.error("Failed to create trip", error);
@@ -119,6 +132,30 @@ const MyTripsPage = () => {
                                 value={newTrip.description}
                                 onChange={e => setNewTrip({ ...newTrip, description: e.target.value })}
                             />
+                            
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>可见性</label>
+                                <select
+                                    value={newTrip.visibility}
+                                    onChange={e => setNewTrip({ ...newTrip, visibility: e.target.value })}
+                                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                                >
+                                    <option value="private">私有 (Private)</option>
+                                    <option value="public">公开 (Public)</option>
+                                    <option value="shared">共享 (Shared)</option>
+                                </select>
+                            </div>
+
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>封面图片</label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={e => setCoverFile(e.target.files[0])}
+                                    style={{ width: '100%' }}
+                                />
+                            </div>
+
                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
                                 <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>
                                     取消

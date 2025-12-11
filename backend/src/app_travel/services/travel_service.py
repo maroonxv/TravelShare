@@ -74,7 +74,8 @@ class TravelService:
         end_date: date,
         budget_amount: Optional[float] = None,
         budget_currency: str = "CNY",
-        visibility: str = "private"
+        visibility: str = "private",
+        cover_image_url: Optional[str] = None
     ) -> Trip:
         """创建旅行
         
@@ -87,6 +88,7 @@ class TravelService:
             budget_amount: 预算金额（可选）
             budget_currency: 预算货币（默认CNY）
             visibility: 可见性（默认private）
+            cover_image_url: 封面图片URL（可选）
             
         Returns:
             创建的旅行实例
@@ -105,7 +107,8 @@ class TravelService:
             creator_id=creator_id,
             date_range=date_range,
             budget=budget,
-            visibility=trip_visibility
+            visibility=trip_visibility,
+            cover_image_url=cover_image_url
         )
         
         # 持久化
@@ -135,7 +138,8 @@ class TravelService:
         visibility: Optional[str] = None,
         budget_amount: Optional[float] = None,
         budget_currency: str = "CNY",
-        status: Optional[str] = None
+        status: Optional[str] = None,
+        cover_image_url: Optional[str] = None
     ) -> Optional[Trip]:
         """更新旅行基本信息
         
@@ -147,6 +151,7 @@ class TravelService:
             budget_amount: 新预算金额（可选）
             budget_currency: 预算货币
             status: 新状态（可选）
+            cover_image_url: 新封面图片URL（可选）
             
         Returns:
             更新后的旅行实例
@@ -156,15 +161,31 @@ class TravelService:
             return None
         
         # 委托给聚合根处理（领域逻辑在聚合根中）
-        if name:
-            trip.update_name(TripName(name))
-        if description is not None:
-            trip.update_description(TripDescription(description))
-        if visibility:
-            trip.update_visibility(TripVisibility.from_string(visibility))
+        # 构建值对象
+        trip_name = TripName(name) if name else None
+        trip_desc = TripDescription(description) if description is not None else None
+        trip_visibility = TripVisibility.from_string(visibility) if visibility else None
+        
+        budget = None
         if budget_amount is not None:
-            budget = Money(Decimal(str(budget_amount)), budget_currency) if budget_amount > 0 else None
-            trip.update_budget(budget)
+             budget = Money(Decimal(str(budget_amount)), budget_currency) if budget_amount > 0 else None
+        
+        # 调用聚合根的 update_info 方法
+        # 注意：这里我们使用 update_info 来统一处理信息更新，而不是分散的 update_xxx
+        # 之前的 update_name 等方法如果不再使用可以考虑移除或保留兼容
+        
+        # 为了兼容现有代码，我们先使用聚合根提供的具体方法，对于新加的 cover_image_url 和 visibility，
+        # 如果聚合根有 update_info 最好用那个。
+        # 查看 Trip 聚合根代码，它有 update_info 方法支持 name, description, budget, visibility, cover_image_url
+        
+        trip.update_info(
+            name=trip_name,
+            description=trip_desc,
+            budget=budget,
+            visibility=trip_visibility,
+            cover_image_url=cover_image_url
+        )
+        
         if status:
             trip.update_status(TripStatus.from_string(status))
         

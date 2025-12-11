@@ -46,6 +46,7 @@ class Trip:
         budget: Optional[Money] = None,
         visibility: TripVisibility = TripVisibility.PRIVATE,
         status: TripStatus = TripStatus.PLANNING,
+        cover_image_url: Optional[str] = None,
         created_at: Optional[datetime] = None,
         updated_at: Optional[datetime] = None
     ):
@@ -57,6 +58,7 @@ class Trip:
         self._budget = budget
         self._visibility = visibility
         self._status = status
+        self._cover_image_url = cover_image_url
         self._created_at = created_at or datetime.utcnow()
         self._updated_at = updated_at or self._created_at
         self._members: List[TripMember] = []
@@ -73,7 +75,8 @@ class Trip:
         creator_id: str,
         date_range: DateRange,
         budget: Optional[Money] = None,
-        visibility: TripVisibility = TripVisibility.PRIVATE
+        visibility: TripVisibility = TripVisibility.PRIVATE,
+        cover_image_url: Optional[str] = None
     ) -> 'Trip':
         """创建新旅行
         
@@ -86,7 +89,8 @@ class Trip:
             creator_id=creator_id,
             date_range=date_range,
             budget=budget,
-            visibility=visibility
+            visibility=visibility,
+            cover_image_url=cover_image_url
         )
         
         # 创建者自动成为管理员
@@ -119,10 +123,11 @@ class Trip:
         budget: Optional[Money] = None,
         visibility: TripVisibility = TripVisibility.PRIVATE,
         status: TripStatus = TripStatus.PLANNING,
+        cover_image_url: Optional[str] = None,
         created_at: Optional[datetime] = None,
         updated_at: Optional[datetime] = None
     ) -> 'Trip':
-        """从持久化数据重建旅行（不发布事件）"""
+        """从持久化数据重建旅行"""
         trip = cls(
             trip_id=trip_id,
             name=name,
@@ -132,6 +137,7 @@ class Trip:
             budget=budget,
             visibility=visibility,
             status=status,
+            cover_image_url=cover_image_url,
             created_at=created_at,
             updated_at=updated_at
         )
@@ -159,7 +165,7 @@ class Trip:
     @property
     def name(self) -> TripName:
         return self._name
-    
+        
     @property
     def description(self) -> TripDescription:
         return self._description
@@ -185,6 +191,10 @@ class Trip:
         return self._status
     
     @property
+    def cover_image_url(self) -> Optional[str]:
+        return self._cover_image_url
+    
+    @property
     def created_at(self) -> datetime:
         return self._created_at
     
@@ -193,12 +203,61 @@ class Trip:
         return self._updated_at
     
     @property
-    def members(self) -> List[TripMember]:
-        return self._members.copy()
+    def members(self) -> tuple[TripMember, ...]:
+        return tuple(self._members)
     
     @property
-    def days(self) -> List[TripDay]:
-        return self._days.copy()
+    def days(self) -> tuple[TripDay, ...]:
+        return tuple(self._days)
+        
+    def get_role(self, user_id: str) -> Optional[MemberRole]:
+        """获取用户角色"""
+        for member in self._members:
+            if member.user_id == user_id:
+                return member.role
+        return None
+    
+    # ==================== 业务方法 ====================
+    
+    def update_info(
+        self,
+        name: Optional[TripName] = None,
+        description: Optional[TripDescription] = None,
+        date_range: Optional[DateRange] = None,
+        budget: Optional[Money] = None,
+        visibility: Optional[TripVisibility] = None,
+        cover_image_url: Optional[str] = None
+    ) -> None:
+        """更新旅行基本信息"""
+        if name:
+            self._name = name
+        if description:
+            self._description = description
+        if budget:
+            self._budget = budget
+        if visibility:
+            self._visibility = visibility
+        if cover_image_url is not None:
+            self._cover_image_url = cover_image_url
+            
+        if date_range:
+            # 只有在规划阶段才能随意更改日期
+            if self._status != TripStatus.PLANNING and date_range != self._date_range:
+                 # 简单处理：非规划阶段暂不支持修改日期，或者需要复杂的逻辑来处理已有的活动
+                 # 这里暂时允许修改，但是需要重新生成日程结构
+                 pass
+            
+            old_range = self._date_range
+            self._date_range = date_range
+            # 如果日期改变，需要调整日程
+            if old_range != date_range:
+                self._adjust_days(old_range, date_range)
+        
+        self._updated_at = datetime.utcnow()
+        self._add_event(TripUpdatedEvent(
+            trip_id=self._id.value,
+            updated_fields=tuple(['info'])
+        ))
     
     @property
     def member_count(self) -> int:

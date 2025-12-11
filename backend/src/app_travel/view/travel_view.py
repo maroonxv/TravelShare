@@ -4,6 +4,7 @@ from decimal import Decimal
 import traceback
 
 from shared.database.core import SessionLocal
+from shared.storage.local_file_storage import LocalFileStorageService
 from app_travel.infrastructure.database.dao_impl.sqlalchemy_trip_dao import SqlAlchemyTripDao
 from app_travel.infrastructure.database.repository_impl.trip_repository_impl import TripRepositoryImpl
 from app_travel.infrastructure.external_service.gaode_geo_service_impl import GaodeGeoServiceImpl
@@ -87,6 +88,7 @@ def serialize_trip(trip: Trip) -> dict:
         'budget_amount': float(trip.budget.amount) if trip.budget else 0, # Flat field for frontend convenience
         'visibility': trip.visibility.value,
         'status': trip.status.value,
+        'cover_image_url': trip.cover_image_url,
         'created_at': trip.created_at.isoformat(),
         'updated_at': trip.updated_at.isoformat(),
         'member_count': len(trip.members), # Helper count
@@ -167,6 +169,29 @@ def serialize_transit_result(result: TransitCalculationResult) -> dict:
 
 # ==================== API 路由 ====================
 
+@travel_bp.route('/trips/cover-image', methods=['POST'])
+def upload_trip_cover():
+    """上传旅行封面图片
+    
+    Returns:
+        JSON: { 'url': '/static/uploads/trip_covers/xxx.jpg' }
+    """
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+        
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+        
+    try:
+        storage = LocalFileStorageService()
+        # Save to static/uploads/trip_covers
+        url = storage.save(file, sub_folder='trip_covers')
+        return jsonify({'url': url}), 201
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @travel_bp.route('/trips', methods=['POST'])
 def create_trip():
     """创建新旅行"""
@@ -182,7 +207,8 @@ def create_trip():
             end_date=date.fromisoformat(data['end_date']),
             budget_amount=data.get('budget_amount'),
             budget_currency=data.get('budget_currency', 'CNY'),
-            visibility=data.get('visibility', 'private')
+            visibility=data.get('visibility', 'private'),
+            cover_image_url=data.get('cover_image_url')
         )
         g.session.commit()
         return jsonify(serialize_trip(trip)), 201
@@ -218,7 +244,8 @@ def update_trip(trip_id):
             visibility=data.get('visibility'),
             budget_amount=data.get('budget_amount'),
             budget_currency=data.get('budget_currency', 'CNY'),
-            status=data.get('status')
+            status=data.get('status'),
+            cover_image_url=data.get('cover_image_url')
         )
         
         if not trip:

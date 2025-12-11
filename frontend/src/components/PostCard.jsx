@@ -86,16 +86,26 @@ const PostCard = ({ post, onDelete }) => {
                 </Link>
                 <p className={styles.text}>{post.content}</p>
 
-                {post.trip_id && (
+                {post.trip && (
                     <div className={styles.tripLink}>
                         <MapPin size={16} />
-                        <span>关联旅行: {post.trip_name || '查看旅行'}</span>
+                        {post.trip.is_public ? (
+                            <Link to={`/trips/${post.trip.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                                关联旅行: {post.trip.title}
+                            </Link>
+                        ) : (
+                            <span>关联旅行: {post.trip.title}</span>
+                        )}
                     </div>
                 )}
 
                 {post.tags && post.tags.length > 0 && (
                     <div className={styles.tags}>
-                        {post.tags.map((tag, idx) => <span key={idx} className={styles.tag}>#{tag}</span>)}
+                        {post.tags.map((tag, idx) => (
+                            <Link key={idx} to={`/social?tag=${tag}`} className={styles.tag} style={{ textDecoration: 'none', color: '#3b82f6' }}>
+                                #{tag}
+                            </Link>
+                        ))}
                     </div>
                 )}
             </div>
@@ -107,7 +117,7 @@ const PostCard = ({ post, onDelete }) => {
                 </button>
                 <Link to={`/social/post/${post.id}`} className={styles.actionBtn}>
                     <MessageCircle size={20} />
-                    <span>{post.comments_count || 0}</span>
+                    <span>{post.comment_count || 0}</span>
                 </Link>
             </div>
         </Card>

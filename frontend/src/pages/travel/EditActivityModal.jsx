@@ -34,12 +34,20 @@ const EditActivityModal = ({ tripId, dayIndex, activity, onClose, onSuccess }) =
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        if (formData.end_time < formData.start_time) {
+            alert("结束时间不能早于开始时间");
+            return;
+        }
+
         setLoading(true);
         try {
             const payload = {
                 ...formData,
                 cost_amount: formData.cost,
-                cost: undefined
+                cost_currency: formData.currency,
+                cost: undefined,
+                currency: undefined
             };
             await updateActivity(tripId, dayIndex, activity.id, payload);
             onSuccess();

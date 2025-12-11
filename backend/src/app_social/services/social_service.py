@@ -14,6 +14,9 @@ from app_social.domain.value_objects.social_value_objects import (
 )
 from app_social.infrastructure.database.repository_impl.post_repository_impl import PostRepositoryImpl
 from app_social.infrastructure.database.repository_impl.conversation_repository_impl import ConversationRepositoryImpl
+from app_travel.infrastructure.database.dao_impl.sqlalchemy_trip_dao import SqlAlchemyTripDao
+from app_travel.infrastructure.database.repository_impl.trip_repository_impl import TripRepositoryImpl
+from app_travel.domain.value_objects.travel_value_objects import TripId
 from app_social.infrastructure.database.dao_impl.sqlalchemy_post_dao import SqlAlchemyPostDao
 from app_social.infrastructure.database.dao_impl.sqlalchemy_conversation_dao import SqlAlchemyConversationDao
 from app_social.infrastructure.database.dao_impl.sqlalchemy_message_dao import SqlAlchemyMessageDao
@@ -336,51 +339,85 @@ class SocialService:
         author_name = "Unknown"
         author_avatar = None
         
-        if author_info:
-            author_name = author_info.get("name", "Unknown")
-            author_avatar = author_info.get("avatar")
-        else:
-            try:
-                # 临时创建 session 来查询用户信息
-                # 更好的做法是传递 session 进来，或者使用缓存服务
-                session = SessionLocal()
+        session = SessionLocal()
+        try:
+            user_dao = SqlAlchemyUserDao(session)
+            user_repo = UserRepositoryImpl(user_dao)
+            
+            # Post author
+            if author_info:
+                author_name = author_info.get("name", "Unknown")
+                author_avatar = author_info.get("avatar")
+            else:
                 try:
-                    user_dao = SqlAlchemyUserDao(session)
-                    user_repo = UserRepositoryImpl(user_dao)
                     author = user_repo.find_by_id(UserId(post.author_id))
                     if author:
                         author_name = author.username.value
                         author_avatar = author.profile.avatar_url
-                finally:
-                    session.close()
-            except Exception as e:
-                print(f"Error fetching author info: {e}")
+                except Exception as e:
+                    print(f"Error fetching author info: {e}")
 
-        return {
-            "id": post.id.value,
-            "author_id": post.author_id,
-            "author_name": author_name,
-            "author_avatar": author_avatar,
-            "title": post.content.title,
-            "content": post.content.text,
-            "media_urls": post.content.images,
-            "tags": post.content.tags,
-            "visibility": post.visibility.value,
-            "created_at": post.created_at.isoformat(),
-            "updated_at": post.updated_at.isoformat(),
-            "like_count": post.like_count,
-            "comment_count": post.comment_count,
-            "is_liked": post.is_liked_by(viewer_id) if viewer_id else False,
-            "comments": [
-                {
-                    "id": c.comment_id,
-                    "author_id": c.author_id,
-                    "content": c.content,
-                    "created_at": c.created_at.isoformat(),
-                    "parent_id": c.parent_id
-                } for c in post.comments
-            ]
-        }
+            # Comment authors
+            comment_authors = {}
+            comment_author_ids = list(set(c.author_id for c in post.comments))
+            if comment_author_ids:
+                try:
+                    users = user_repo.find_by_ids([UserId(uid) for uid in comment_author_ids])
+                    for u in users:
+                        comment_authors[u.id.value] = {
+                            "name": u.username.value,
+                            "avatar": u.profile.avatar_url
+                        }
+                except Exception as e:
+                    print(f"Error fetching comment authors: {e}")
+
+            # Trip Info
+            trip_info = None
+            if post.trip_id:
+                try:
+                    trip_dao = SqlAlchemyTripDao(session)
+                    trip_repo = TripRepositoryImpl(trip_dao)
+                    trip = trip_repo.find_by_id(TripId(post.trip_id))
+                    if trip:
+                        trip_info = {
+                            "id": trip.id.value,
+                            "title": trip.name.value,
+                            "is_public": trip.visibility.value == 'public'
+                        }
+                except Exception as e:
+                    print(f"Error fetching trip info: {e}")
+
+            return {
+                "id": post.id.value,
+                "author_id": post.author_id,
+                "author_name": author_name,
+                "author_avatar": author_avatar,
+                "title": post.content.title,
+                "content": post.content.text,
+                "media_urls": post.content.images,
+                "tags": post.content.tags,
+                "visibility": post.visibility.value,
+                "trip_id": post.trip_id,
+                "trip": trip_info,
+                "created_at": post.created_at.isoformat(),
+                "updated_at": post.updated_at.isoformat(),
+                "like_count": post.like_count,
+                "comment_count": post.comment_count,
+                "is_liked": post.is_liked_by(viewer_id) if viewer_id else False,
+                "comments": [
+                    {
+                        "id": c.comment_id,
+                        "author_id": c.author_id,
+                        "author_name": comment_authors.get(c.author_id, {}).get("name", "Unknown"),
+                        "author_avatar": comment_authors.get(c.author_id, {}).get("avatar"),
+                        "content": c.content,
+                        "created_at": c.created_at.isoformat(),
+                        "parent_id": c.parent_id
+                    } for c in post.comments
+                ]
+            }
+        finally:
+            session.close()
 
     # ==================== 会话管理 ====================
     

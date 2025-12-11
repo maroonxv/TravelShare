@@ -317,6 +317,7 @@ class TripPO(Base):
     # 状态
     visibility = Column(String(20), nullable=False, default='private')
     status = Column(String(20), nullable=False, default='planning')
+    cover_image_url = Column(String(500), nullable=True)
     
     # 时间戳
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
@@ -355,6 +356,7 @@ class TripPO(Base):
             budget=budget,
             visibility=TripVisibility.from_string(self.visibility),
             status=TripStatus.from_string(self.status),
+            cover_image_url=self.cover_image_url,
             created_at=self.created_at,
             updated_at=self.updated_at
         )
@@ -373,6 +375,7 @@ class TripPO(Base):
             budget_currency=trip.budget.currency if trip.budget else None,
             visibility=trip.visibility.value,
             status=trip.status.value,
+            cover_image_url=trip.cover_image_url,
             created_at=trip.created_at,
             updated_at=trip.updated_at
         )
@@ -397,6 +400,10 @@ class TripPO(Base):
         self.end_date = trip.date_range.end_date
         self.budget_amount = trip.budget.amount if trip.budget else None
         self.budget_currency = trip.budget.currency if trip.budget else None
+        self.visibility = trip.visibility.value
+        self.status = trip.status.value
+        self.cover_image_url = trip.cover_image_url
+        self.updated_at = trip.updated_at
         self.visibility = trip.visibility.value
         self.status = trip.status.value
         self.updated_at = trip.updated_at

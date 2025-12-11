@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getPost, addComment, getComments } from '../../api/social';
 import PostCard from '../../components/PostCard';
 import Input from '../../components/Input';
@@ -74,11 +74,17 @@ const PostDetailPage = () => {
                     ) : (
                         comments.map((comment, index) => (
                             <div key={index} className={styles.comment}>
-                                <div className={styles.commentAvatar}>
-                                    {comment.username?.charAt(0).toUpperCase() || 'U'}
-                                </div>
+                                <Link to={`/users/${comment.author_id}`} className={styles.commentAvatar} style={{ textDecoration: 'none' }}>
+                                    {comment.author_avatar ? (
+                                        <img src={comment.author_avatar} alt={comment.author_name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                                    ) : (
+                                        (comment.author_name || 'U').charAt(0).toUpperCase()
+                                    )}
+                                </Link>
                                 <div className={styles.commentContent}>
-                                    <span className={styles.commentUser}>{comment.username || 'User'}</span>
+                                    <Link to={`/users/${comment.author_id}`} className={styles.commentUser} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                        {comment.author_name || 'User'}
+                                    </Link>
                                     <p className={styles.commentText}>{comment.content}</p>
                                     <span className={styles.commentDate}>{new Date(comment.created_at).toLocaleDateString()}</span>
                                 </div>

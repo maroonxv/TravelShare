@@ -22,6 +22,17 @@ export const createTrip = async (tripData) => {
     return response.data;
 };
 
+export const uploadTripCover = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await client.post('/travel/trips/cover-image', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+    return response.data; // { url: '...' }
+};
+
 export const updateTrip = async (tripId, tripData) => {
     const response = await client.put(`/travel/trips/${tripId}`, tripData);
     return response.data;
