@@ -14,6 +14,9 @@ from app_travel.domain.value_objects.travel_value_objects import (
     TripStatus, MemberRole, ActivityType, TripVisibility
 )
 from app_travel.domain.aggregate.trip_aggregate import Trip
+from app_social.infrastructure.database.po.friendship_po import FriendshipPO
+from app_social.domain.value_objects.friendship_value_objects import FriendshipStatus
+from unittest.mock import MagicMock, patch
 
 class TestTravelServiceIntegration:
     
@@ -93,7 +96,7 @@ class TestTravelServiceIntegration:
         assert result is True
         assert travel_service.get_trip(trip2.id.value) is None
 
-    def test_member_management(self, travel_service):
+    def test_member_management(self, travel_service, db_session):
         """Test adding, removing, and changing roles of members"""
         creator_id = f"owner_{uuid.uuid4()}"
         trip = travel_service.create_trip(
@@ -102,14 +105,29 @@ class TestTravelServiceIntegration:
         )
         
         member_id = f"member_{uuid.uuid4()}"
+
+        # Create Friendship (Required for adding member)
+        friendship = FriendshipPO(
+            id=str(uuid.uuid4()),
+            requester_id=creator_id,
+            addressee_id=member_id,
+            status=FriendshipStatus.ACCEPTED
+        )
+        db_session.add(friendship)
+        db_session.commit()
         
         # Add Member
-        updated_trip = travel_service.add_member(
-            trip_id=trip.id.value,
-            user_id=member_id,
-            role="member",
-            added_by=creator_id
-        )
+        session_proxy = MagicMock(wraps=db_session)
+        session_proxy.close = MagicMock()
+        
+        with patch('app_social.services.social_service.SessionLocal', return_value=session_proxy):
+            updated_trip = travel_service.add_member(
+                trip_id=trip.id.value,
+                user_id=member_id,
+                role="member",
+                added_by=creator_id
+            )
+        
         assert len(updated_trip.members) == 2 # Creator + New Member
         member = next(m for m in updated_trip.members if m.user_id == member_id)
         assert member.role == MemberRole.MEMBER
@@ -193,6 +211,7 @@ class TestTravelServiceIntegration:
         res1 = travel_service.add_activity(
             trip_id=trip.id.value,
             day_index=0,
+            operator_id="u1",
             name="Visit Tiananmen",
             activity_type="sightseeing",
             location_name="北京市天安门广场", # Specific enough for Geocoding
@@ -219,6 +238,7 @@ class TestTravelServiceIntegration:
         res2 = travel_service.add_activity(
             trip_id=trip.id.value,
             day_index=0,
+            operator_id="u1",
             name="Forbidden City",
             activity_type="sightseeing",
             location_name="故宫博物院",
@@ -251,6 +271,7 @@ class TestTravelServiceIntegration:
             trip_id=trip.id.value,
             day_index=0,
             activity_id=day0.activities[1].id,
+            operator_id="u1",
             location_name="颐和园",
             latitude=39.9999,
             longitude=116.2755
@@ -265,7 +286,8 @@ class TestTravelServiceIntegration:
         travel_service.remove_activity(
             trip_id=trip.id.value,
             day_index=0,
-            activity_id=day0.activities[1].id
+            activity_id=day0.activities[1].id,
+            operator_id="u1"
         )
         trip = travel_service.get_trip(trip.id.value)
         assert len(trip.days[0].activities) == 1
@@ -299,7 +321,7 @@ class TestTravelServiceIntegration:
             }
         ]
         
-        travel_service.update_day_itinerary(trip.id.value, 0, activities_data)
+        travel_service.update_day_itinerary(trip.id.value, 0, activities_data, operator_id="u1")
         
         trip = travel_service.get_trip(trip.id.value)
         assert len(trip.days[0].activities) == 2
@@ -341,6 +363,7 @@ class TestTravelServiceIntegration:
         travel_service.add_activity(
             trip_id=trip.id.value,
             day_index=0,
+            operator_id="u1",
             name="Expensive Dinner",
             activity_type="dining",
             location_name="Restaurant",
@@ -353,3 +376,69 @@ class TestTravelServiceIntegration:
         assert stats is not None
         assert stats['total_estimated_cost'] == "CNY 500.00"
         assert stats['activity_count'] == 1
+
+    def test_rbac_enforcement(self, travel_service, db_session):
+        """Test Role-Based Access Control and Friendship Constraints"""
+        creator_id = f"creator_{uuid.uuid4()}"
+        trip = travel_service.create_trip(
+            name="RBAC Trip", description="Testing Permissions", creator_id=creator_id,
+            start_date=date.today(), end_date=date.today()
+        )
+        
+        stranger_id = f"stranger_{uuid.uuid4()}"
+        
+        session_proxy = MagicMock(wraps=db_session)
+        session_proxy.close = MagicMock()
+        
+        with patch('app_social.services.social_service.SessionLocal', return_value=session_proxy):
+            # 1. Test adding non-friend member (Should Fail)
+            with pytest.raises(ValueError, match="not your friend"):
+                travel_service.add_member(
+                    trip_id=trip.id.value,
+                    user_id=stranger_id,
+                    role="member",
+                    added_by=creator_id
+                )
+                
+            # 2. Add a valid member (Friend)
+            friend_id = f"friend_{uuid.uuid4()}"
+            friendship = FriendshipPO(
+                id=str(uuid.uuid4()),
+                requester_id=creator_id,
+                addressee_id=friend_id,
+                status=FriendshipStatus.ACCEPTED
+            )
+            db_session.add(friendship)
+            db_session.commit()
+            
+            travel_service.add_member(
+                trip_id=trip.id.value,
+                user_id=friend_id,
+                role="member",
+                added_by=creator_id
+            )
+            
+            # 3. Test non-admin adding activity (Should Fail)
+            with pytest.raises(ValueError, match="Only trip admins"):
+                travel_service.add_activity(
+                    trip_id=trip.id.value,
+                    day_index=0,
+                    operator_id=friend_id, # Regular member
+                    name="Unauthorized Activity",
+                    activity_type="sightseeing",
+                    location_name="Somewhere",
+                    start_time=time(9, 0),
+                    end_time=time(10, 0)
+                )
+                
+            # 4. Test admin adding activity (Should Succeed)
+            travel_service.add_activity(
+                trip_id=trip.id.value,
+                day_index=0,
+                operator_id=creator_id, # Admin
+                name="Authorized Activity",
+                activity_type="sightseeing",
+                location_name="Somewhere",
+                start_time=time(9, 0),
+                end_time=time(10, 0)
+            )

@@ -58,7 +58,7 @@ class TestTripAggregate:
         assert isinstance(events[0], TripCreatedEvent)
 
     def test_add_member(self, trip):
-        trip.add_member("user_2", MemberRole.MEMBER)
+        trip.add_member("user_2", MemberRole.MEMBER, added_by=trip.creator_id)
         assert trip.member_count == 2
         assert trip.is_member("user_2")
         assert not trip.is_admin("user_2")
@@ -68,17 +68,25 @@ class TestTripAggregate:
 
     def test_add_member_duplicate(self, trip):
         with pytest.raises(ValueError, match="already a member"):
-            trip.add_member(trip.creator_id)
+            trip.add_member(trip.creator_id, added_by=trip.creator_id)
+            
+    def test_add_member_permission_error(self, trip):
+        # Add user_2 as member
+        trip.add_member("user_2", MemberRole.MEMBER, added_by=trip.creator_id)
+        
+        # user_2 tries to add user_3 -> Error
+        with pytest.raises(ValueError, match="Only admin can add members"):
+            trip.add_member("user_3", MemberRole.MEMBER, added_by="user_2")
 
     def test_remove_member(self, trip):
-        trip.add_member("user_2")
+        trip.add_member("user_2", added_by=trip.creator_id)
         trip.remove_member("user_2", removed_by=trip.creator_id)
         assert trip.member_count == 1
         assert not trip.is_member("user_2")
 
     def test_remove_member_permission(self, trip):
-        trip.add_member("user_2")
-        trip.add_member("user_3")
+        trip.add_member("user_2", added_by=trip.creator_id)
+        trip.add_member("user_3", added_by=trip.creator_id)
         
         with pytest.raises(ValueError, match="Only admin can remove"):
             trip.remove_member("user_2", removed_by="user_3")
@@ -88,7 +96,7 @@ class TestTripAggregate:
             trip.remove_member(trip.creator_id, removed_by=trip.creator_id)
 
     def test_change_member_role(self, trip):
-        trip.add_member("user_2")
+        trip.add_member("user_2", added_by=trip.creator_id)
         trip.change_member_role("user_2", MemberRole.ADMIN, changed_by=trip.creator_id)
         assert trip.is_admin("user_2")
         
@@ -111,7 +119,7 @@ class TestTripAggregate:
             cost=Money(10, "USD")
         )
         
-        trip.add_activity(day_index=0, activity=activity)
+        trip.add_activity(day_index=0, activity=activity, operator_id=trip.creator_id)
         
         day = trip.days[0]
         assert len(day.activities) == 1
@@ -120,6 +128,21 @@ class TestTripAggregate:
         events = trip.pop_events()
         # 0: created, 1: activity added
         assert isinstance(events[1], ActivityAddedEvent)
+        
+    def test_add_activity_permission_error(self, trip):
+        location = Location(name="Place", latitude=0, longitude=0, address="Addr")
+        activity = Activity.create(
+            name="Sightseeing",
+            activity_type=ActivityType.SIGHTSEEING,
+            location=location,
+            start_time=datetime(2023, 1, 1, 10, 0).time(),
+            end_time=datetime(2023, 1, 1, 12, 0).time(),
+            cost=Money(10, "USD")
+        )
+        
+        # Non-member tries to add activity
+        with pytest.raises(ValueError, match="Only trip members can add activities"):
+            trip.add_activity(day_index=0, activity=activity, operator_id="stranger")
 
     def test_add_activity_with_transit(self, trip):
         # Mock ItineraryService
@@ -144,7 +167,7 @@ class TestTripAggregate:
             start_time=datetime(2023, 1, 1, 10, 0).time(),
             end_time=datetime(2023, 1, 1, 12, 0).time()
         )
-        trip.add_activity(0, a1)
+        trip.add_activity(0, a1, operator_id=trip.creator_id)
         
         # Activity 2
         a2 = Activity.create(
@@ -155,7 +178,7 @@ class TestTripAggregate:
             end_time=datetime(2023, 1, 1, 14, 0).time()
         )
         
-        result = trip.add_activity(0, a2, itinerary_service=service)
+        result = trip.add_activity(0, a2, operator_id=trip.creator_id, itinerary_service=service)
         
         assert result is not None
         assert len(result.transits) == 1
@@ -170,9 +193,9 @@ class TestTripAggregate:
             start_time=datetime(2023, 1, 1, 10, 0).time(),
             end_time=datetime(2023, 1, 1, 12, 0).time()
         )
-        trip.add_activity(0, a1)
+        trip.add_activity(0, a1, operator_id=trip.creator_id)
         
-        trip.modify_activity(0, a1.id, name="A1 Updated")
+        trip.modify_activity(0, a1.id, operator_id=trip.creator_id, name="A1 Updated")
         
         day = trip.days[0]
         assert day.activities[0].name == "A1 Updated"
@@ -185,9 +208,9 @@ class TestTripAggregate:
             start_time=datetime(2023, 1, 1, 10, 0).time(),
             end_time=datetime(2023, 1, 1, 12, 0).time()
         )
-        trip.add_activity(0, a1)
+        trip.add_activity(0, a1, operator_id=trip.creator_id)
         
-        trip.remove_activity(0, a1.id)
+        trip.remove_activity(0, a1.id, operator_id=trip.creator_id)
         assert len(trip.days[0].activities) == 0
 
     def test_start_complete_cancel(self, trip):
@@ -228,7 +251,7 @@ class TestTripAggregate:
             end_time=datetime(2023, 1, 1, 12, 0).time(),
             cost=Money(100, "USD")
         )
-        trip.add_activity(0, a1)
+        trip.add_activity(0, a1, operator_id=trip.creator_id)
         
         stats = trip.generate_statistics()
         assert stats.activity_count == 1
@@ -244,6 +267,6 @@ class TestTripAggregate:
             end_time=datetime(2023, 1, 1, 12, 0).time(),
             cost=Money(1500, "USD")
         )
-        trip.add_activity(0, a1)
+        trip.add_activity(0, a1, operator_id=trip.creator_id)
         
         assert not trip.is_within_budget()

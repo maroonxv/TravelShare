@@ -183,14 +183,16 @@ const TripDetailPage = () => {
                                 <Users size={20} />
                                 <span>{trip.member_count}</span>
                             </div>
-                            <button 
-                                onClick={() => setShowAddMemberModal(true)}
-                                className={styles.iconBtn}
-                                style={{ marginLeft: '0.5rem', cursor: 'pointer', background: 'none', border: 'none', color: '#3b82f6' }}
-                                title="添加成员"
-                            >
-                                <Plus size={18} />
-                            </button>
+                            {isCurrentUserAdmin && (
+                                <button 
+                                    onClick={() => setShowAddMemberModal(true)}
+                                    className={styles.iconBtn}
+                                    style={{ marginLeft: '0.5rem', cursor: 'pointer', background: 'none', border: 'none', color: '#3b82f6' }}
+                                    title="添加成员"
+                                >
+                                    <Plus size={18} />
+                                </button>
+                            )}
                         </div>
                     </div>
                     <div className={styles.metaBlock}>
@@ -269,9 +271,9 @@ const TripDetailPage = () => {
                                             <div className={styles.dot} />
                                             <div 
                                                 className={styles.activityCard}
-                                                onClick={() => setEditingActivity(activity)}
-                                                style={{ cursor: 'pointer', border: isTimeConflict ? '1px solid #ef4444' : undefined }}
-                                                title="点击修改活动"
+                                                onClick={() => isCurrentUserAdmin && setEditingActivity(activity)}
+                                                style={{ cursor: isCurrentUserAdmin ? 'pointer' : 'default', border: isTimeConflict ? '1px solid #ef4444' : undefined }}
+                                                title={isCurrentUserAdmin ? "点击修改活动" : "仅管理员可修改"}
                                             >
                                                 <h4 className={styles.activityName}>{activity.name}</h4>
                                                 <div className={styles.location}>
@@ -316,11 +318,13 @@ const TripDetailPage = () => {
                 )}
 
                 {/* Add Activity Button */}
-                <div className={styles.addBtnContainer}>
-                    <Button variant="travel" onClick={() => setShowAddModal(true)}>
-                        + 添加活动
-                    </Button>
-                </div>
+                {isCurrentUserAdmin && (
+                    <div className={styles.addBtnContainer}>
+                        <Button variant="travel" onClick={() => setShowAddModal(true)}>
+                            + 添加活动
+                        </Button>
+                    </div>
+                )}
             </div>
 
             {showAddModal && (

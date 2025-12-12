@@ -259,6 +259,20 @@ class TravelService:
         if not trip:
             return None
         
+        # 检查是否为好友
+        if added_by and added_by != user_id:
+            try:
+                from app_social.services.social_service import SocialService
+                social_service = SocialService()
+                if not social_service.are_friends(added_by, user_id):
+                    raise ValueError(f"User {user_id} is not your friend")
+            except ImportError:
+                # 忽略循环依赖或模块未找到，降级处理
+                pass
+            except Exception as e:
+                # 重新抛出业务异常
+                raise e
+
         # 委托给聚合根（业务规则在聚合根中）
         trip.add_member(
             user_id=user_id,
@@ -315,6 +329,7 @@ class TravelService:
         self,
         trip_id: str,
         day_index: int,
+        operator_id: str,
         name: str,
         activity_type: str,
         location_name: str,
@@ -359,7 +374,7 @@ class TravelService:
         
         # 委托给聚合根，传入行程服务（无状态）
         itinerary_service = self._create_itinerary_service()
-        result = trip.add_activity(day_index, activity, itinerary_service)
+        result = trip.add_activity(day_index, activity, operator_id, itinerary_service)
         
         self._trip_repository.save(trip)
         self._publish_events(trip)
@@ -371,6 +386,7 @@ class TravelService:
         trip_id: str,
         day_index: int,
         activity_id: str,
+        operator_id: str,
         **updates
     ) -> Optional[TransitCalculationResult]:
         """修改活动
@@ -381,6 +397,7 @@ class TravelService:
             trip_id: 旅行ID
             day_index: 日期索引
             activity_id: 活动ID
+            operator_id: 操作者ID
             **updates: 要更新的字段
         """
         trip = self._trip_repository.find_by_id(TripId(trip_id))
@@ -404,7 +421,7 @@ class TravelService:
         
         # 委托给聚合根
         itinerary_service = self._create_itinerary_service()
-        result = trip.modify_activity(day_index, activity_id, itinerary_service, **updates)
+        result = trip.modify_activity(day_index, activity_id, operator_id, itinerary_service, **updates)
         
         self._trip_repository.save(trip)
         self._publish_events(trip)
@@ -415,7 +432,8 @@ class TravelService:
         self,
         trip_id: str,
         day_index: int,
-        activity_id: str
+        activity_id: str,
+        operator_id: str
     ) -> Optional[TransitCalculationResult]:
         """移除活动"""
         trip = self._trip_repository.find_by_id(TripId(trip_id))
@@ -423,7 +441,7 @@ class TravelService:
             return None
         
         itinerary_service = self._create_itinerary_service()
-        result = trip.remove_activity(day_index, activity_id, itinerary_service)
+        result = trip.remove_activity(day_index, activity_id, operator_id, itinerary_service)
         
         self._trip_repository.save(trip)
         self._publish_events(trip)
@@ -434,7 +452,8 @@ class TravelService:
         self,
         trip_id: str,
         day_index: int,
-        activities_data: List[Dict[str, Any]]
+        activities_data: List[Dict[str, Any]],
+        operator_id: str
     ) -> Optional[TransitCalculationResult]:
         """批量更新某日行程
         
@@ -442,6 +461,7 @@ class TravelService:
             trip_id: 旅行ID
             day_index: 日期索引
             activities_data: 活动数据列表
+            operator_id: 操作者ID
         """
         trip = self._trip_repository.find_by_id(TripId(trip_id))
         if not trip:
@@ -472,7 +492,7 @@ class TravelService:
         
         # 委托给聚合根
         itinerary_service = self._create_itinerary_service()
-        result = trip.update_day_itinerary(day_index, activities, itinerary_service)
+        result = trip.update_day_itinerary(day_index, activities, operator_id, itinerary_service)
         
         self._trip_repository.save(trip)
         self._publish_events(trip)

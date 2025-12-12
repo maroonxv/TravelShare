@@ -279,6 +279,8 @@ def add_member(trip_id):
     
     # 尝试从 session 获取当前用户 ID作为 added_by
     current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
     
     try:
         trip = service.add_member(
@@ -355,6 +357,10 @@ def add_activity(trip_id, day_index):
     
     会自动调用 Domain Service (ItineraryService) 计算交通和验证可行性。
     """
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+
     data = request.get_json()
     service = get_travel_service()
     
@@ -366,6 +372,7 @@ def add_activity(trip_id, day_index):
         result = service.add_activity(
             trip_id=trip_id,
             day_index=day_index,
+            operator_id=current_user_id,
             name=data['name'],
             activity_type=data['activity_type'],
             location_name=data['location_name'],
@@ -399,6 +406,10 @@ def modify_activity(trip_id, day_index, activity_id):
     
     会自动调用 Domain Service 重新计算交通。
     """
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+
     data = request.get_json()
     service = get_travel_service()
     
@@ -415,6 +426,7 @@ def modify_activity(trip_id, day_index, activity_id):
             trip_id=trip_id,
             day_index=day_index,
             activity_id=activity_id,
+            operator_id=current_user_id,
             **updates
         )
         
@@ -429,10 +441,14 @@ def modify_activity(trip_id, day_index, activity_id):
 @travel_bp.route('/trips/<trip_id>/days/<int:day_index>/activities/<activity_id>', methods=['DELETE'])
 def remove_activity(trip_id, day_index, activity_id):
     """移除活动"""
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+
     service = get_travel_service()
     
     try:
-        result = service.remove_activity(trip_id, day_index, activity_id)
+        result = service.remove_activity(trip_id, day_index, activity_id, current_user_id)
         
         if result is None:
             # 可能是 Activity 不存在，或者 Trip 不存在
@@ -469,3 +485,42 @@ def geocode_location():
         return jsonify({'error': 'Location not found'}), 404
         
     return jsonify(result)
+
+@travel_bp.route('/trips/<trip_id>/days/<int:day_index>/itinerary', methods=['PUT'])
+def update_day_itinerary(trip_id, day_index):
+    """批量更新某日行程（Activities）"""
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+
+    data = request.get_json()
+    service = get_travel_service()
+
+    try:
+        # data['activities'] is expected to be a list of activity data
+        activities_data = data.get('activities', [])
+        
+        # We need to preprocess activities_data to convert time strings to time objects
+        for act in activities_data:
+            if 'start_time' in act and isinstance(act['start_time'], str):
+                act['start_time'] = time.fromisoformat(act['start_time'])
+            if 'end_time' in act and isinstance(act['end_time'], str):
+                act['end_time'] = time.fromisoformat(act['end_time'])
+
+        result = service.update_day_itinerary(
+            trip_id=trip_id,
+            day_index=day_index,
+            activities_data=activities_data,
+            operator_id=current_user_id
+        )
+
+        if result is None:
+             return jsonify({'error': 'Trip not found or update failed'}), 404
+
+        g.session.commit()
+        return jsonify(serialize_transit_result(result))
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500

@@ -34,6 +34,22 @@ class SocialService:
         self._event_bus = get_event_bus()
         self._storage_service = LocalFileStorageService()
     
+    def are_friends(self, user_id_1: str, user_id_2: str) -> bool:
+        """检查两人是否为好友"""
+        session = SessionLocal()
+        try:
+            from app_social.infrastructure.database.dao_impl.sqlalchemy_friendship_dao import SqlAlchemyFriendshipDao
+            from app_social.infrastructure.database.repository_impl.friendship_repository_impl import FriendshipRepositoryImpl
+            from app_social.domain.value_objects.friendship_value_objects import FriendshipStatus
+            
+            friend_dao = SqlAlchemyFriendshipDao(session)
+            friend_repo = FriendshipRepositoryImpl(friend_dao)
+            
+            friendship = friend_repo.find_by_users(user_id_1, user_id_2)
+            return friendship is not None and friendship.status == FriendshipStatus.ACCEPTED
+        finally:
+            session.close()
+
     # ==================== 帖子管理 ====================
     
     def create_post(
@@ -586,17 +602,17 @@ class SocialService:
             # "Only become friends can chat"
             # We need to check friendship status.
             # Using FriendshipRepository (Lazy load or import)
-            from app_social.infrastructure.database.dao_impl.sqlalchemy_friendship_dao import SqlAlchemyFriendshipDao
-            from app_social.infrastructure.database.repository_impl.friendship_repository_impl import FriendshipRepositoryImpl
-            from app_social.domain.value_objects.friendship_value_objects import FriendshipStatus
+            # from app_social.infrastructure.database.dao_impl.sqlalchemy_friendship_dao import SqlAlchemyFriendshipDao
+            # from app_social.infrastructure.database.repository_impl.friendship_repository_impl import FriendshipRepositoryImpl
+            # from app_social.domain.value_objects.friendship_value_objects import FriendshipStatus
             
-            friend_dao = SqlAlchemyFriendshipDao(session)
-            friend_repo = FriendshipRepositoryImpl(friend_dao)
-            friendship = friend_repo.find_by_users(user1_id, user2_id)
+            # friend_dao = SqlAlchemyFriendshipDao(session)
+            # friend_repo = FriendshipRepositoryImpl(friend_dao)
+            # friendship = friend_repo.find_by_users(user1_id, user2_id)
             
-            if not friendship or friendship.status != FriendshipStatus.ACCEPTED:
-                 # Be strict?
-                 raise ValueError("Cannot create chat. You are not friends.")
+            # if not friendship or friendship.status != FriendshipStatus.ACCEPTED:
+            #      # Be strict?
+            #      raise ValueError("Cannot create chat. You are not friends.")
             
             conv = Conversation.create_private(user1_id, user2_id)
             

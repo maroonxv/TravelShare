@@ -285,8 +285,21 @@ class Trip:
             nickname: 昵称（可选）
             
         Raises:
-            ValueError: 用户已是成员或旅行已完成
+            ValueError: 权限不足、用户已是成员或旅行已完成
         """
+        # 权限检查：只有管理员（包括创建者）可以添加成员
+        if added_by:
+            operator = self._find_member(added_by)
+            if not operator or not operator.is_admin():
+                raise ValueError("Only admin can add members")
+        elif self.member_count > 0:
+            # 如果没有提供 added_by 且已有成员，则视为非法操作（除非是系统初始化）
+            # 为了安全起见，我们要求必须提供 added_by
+            # 但为了兼容旧代码可能存在的无 added_by 调用（如果有的话），我们这里做个权衡
+            # 实际上 create 方法里添加 creator 时列表是空的，所以 member_count check 很有用
+            # 如果列表非空，说明已经有 creator 了，后续添加必须鉴权
+            raise ValueError("Operator ID (added_by) is required")
+
         if self._find_member(user_id):
             raise ValueError(f"User {user_id} is already a member")
         
@@ -410,6 +423,7 @@ class Trip:
         self, 
         day_index: int, 
         activity: Activity,
+        operator_id: str,
         itinerary_service: Optional['ItineraryService'] = None
     ) -> Optional[TransitCalculationResult]:
         """添加活动到指定日期
@@ -419,11 +433,16 @@ class Trip:
         Args:
             day_index: 日期索引（从0开始）
             activity: 活动实体
+            operator_id: 操作者ID
             itinerary_service: 行程服务（可选）
             
         Returns:
             TransitCalculationResult: 如果计算了交通则返回结果，否则返回 None
         """
+        # 权限检查：只有管理员（包括创建者）可以添加活动
+        if not self.is_admin(operator_id):
+            raise ValueError("Only trip admins can add activities")
+
         if day_index < 0 or day_index >= len(self._days):
             raise ValueError(f"Invalid day index: {day_index}")
         
@@ -475,6 +494,7 @@ class Trip:
         self,
         day_index: int,
         activity_id: str,
+        operator_id: str,
         itinerary_service: Optional['ItineraryService'] = None,
         **updates
     ) -> Optional[TransitCalculationResult]:
@@ -487,12 +507,17 @@ class Trip:
         Args:
             day_index: 日期索引
             activity_id: 活动ID
+            operator_id: 操作者ID
             itinerary_service: 行程服务（可选）
             **updates: 要更新的字段
             
         Returns:
             TransitCalculationResult: 如果计算了交通则返回结果，否则返回 None
         """
+        # 权限检查
+        if not self.is_admin(operator_id):
+            raise ValueError("Only trip admins can modify activities")
+
         if day_index < 0 or day_index >= len(self._days):
             raise ValueError(f"Invalid day index: {day_index}")
         
@@ -570,9 +595,10 @@ class Trip:
         return result
     
     def remove_activity(
-        self, 
-        day_index: int, 
+        self,
+        day_index: int,
         activity_id: str,
+        operator_id: str,
         itinerary_service: Optional['ItineraryService'] = None
     ) -> Optional[TransitCalculationResult]:
         """从指定日期移除活动
@@ -582,11 +608,16 @@ class Trip:
         Args:
             day_index: 日期索引
             activity_id: 活动ID
+            operator_id: 操作者ID
             itinerary_service: 行程服务（可选）
             
         Returns:
             TransitCalculationResult: 如果计算了交通则返回结果，否则返回 None
         """
+        # 权限检查
+        if not self.is_admin(operator_id):
+            raise ValueError("Only trip admins can remove activities")
+
         if day_index < 0 or day_index >= len(self._days):
             raise ValueError(f"Invalid day index: {day_index}")
         
@@ -634,6 +665,7 @@ class Trip:
         self, 
         day_index: int, 
         activities: List[Activity],
+        operator_id: str,
         itinerary_service: Optional['ItineraryService'] = None
     ) -> Optional[TransitCalculationResult]:
         """批量更新某日行程
@@ -643,11 +675,16 @@ class Trip:
         Args:
             day_index: 日期索引
             activities: 新的活动列表
+            operator_id: 操作者ID
             itinerary_service: 行程服务（可选）
             
         Returns:
             TransitCalculationResult: 如果计算了交通则返回结果，否则返回 None
         """
+        # 权限检查
+        if not self.is_admin(operator_id):
+            raise ValueError("Only trip admins can update itinerary")
+
         if day_index < 0 or day_index >= len(self._days):
             raise ValueError(f"Invalid day index: {day_index}")
         
