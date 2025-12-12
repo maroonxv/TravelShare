@@ -18,6 +18,8 @@ from app_travel.view.travel_view import travel_bp
 from app_social.view.social_view import social_bp
 from app_auth.view.auth_view import auth_bp
 from app_admin import admin_bp
+from shared.infrastructure.socket import socketio
+from app_social.infrastructure.socket.handlers import register_social_socket_handlers
 
 def create_app():
     # 配置静态文件目录
@@ -25,7 +27,11 @@ def create_app():
     # static_folder='static' 表示实际文件夹路径（相对于 app.py 所在目录）
     app = Flask(__name__, static_url_path='/static', static_folder='static')
     app.secret_key = os.urandom(24)  # 配置密钥以支持 session
-    CORS(app)
+    CORS(app, supports_credentials=True)
+    
+    # Initialize SocketIO
+    socketio.init_app(app)
+    register_social_socket_handlers()
     
     # 确保上传目录存在
     upload_dir = os.path.join(app.static_folder, 'uploads')
@@ -52,4 +58,4 @@ def create_app():
 
 if __name__ == '__main__':
     app = create_app()
-    app.run(debug=True, port=5001)
+    socketio.run(app, debug=True, port=5001)

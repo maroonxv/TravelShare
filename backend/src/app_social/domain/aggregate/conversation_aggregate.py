@@ -225,7 +225,8 @@ class Conversation:
             message_id=message.message_id,
             sender_id=sender_id,
             recipient_ids=tuple(recipient_ids),
-            message_type=content.message_type
+            message_type=content.message_type,
+            content=content.text
         ))
         
         return message

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import { 
     getConversations, 
     getMessages, 
@@ -30,6 +31,65 @@ const ChatPage = () => {
     const [showDropdown, setShowDropdown] = useState(false);
     const messagesEndRef = useRef(null);
     const dropdownRef = useRef(null);
+    const socketRef = useRef(null);
+    const activeConvIdRef = useRef(activeConvId);
+
+    useEffect(() => {
+        activeConvIdRef.current = activeConvId;
+    }, [activeConvId]);
+
+    // Socket initialization
+    useEffect(() => {
+        const socket = io('http://localhost:5001', {
+            withCredentials: true,
+            transports: ['websocket']
+        });
+        socketRef.current = socket;
+
+        socket.on('connect', () => {
+            console.log('Socket connected');
+        });
+
+        socket.on('new_message', (msg) => {
+            console.log('New message:', msg);
+            
+            // 1. Update messages if looking at this conversation
+            if (activeConvIdRef.current === msg.conversation_id) {
+                setMessages(prev => {
+                    if (prev.find(m => m.id === msg.id)) return prev;
+                    return [...prev, msg];
+                });
+            }
+
+            // 2. Update conversation list preview
+            setConversations(prev => prev.map(c => {
+                if (c.id === msg.conversation_id) {
+                    return {
+                        ...c,
+                        last_message: {
+                            content: msg.content,
+                            created_at: msg.created_at
+                        }
+                    };
+                }
+                return c;
+            }));
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, []);
+
+    // Join/Leave conversation room
+    useEffect(() => {
+        if (activeConvId && socketRef.current) {
+            socketRef.current.emit('join', { room: activeConvId });
+            return () => {
+                socketRef.current.emit('leave', { room: activeConvId });
+            };
+        }
+    }, [activeConvId]);
 
     useEffect(() => {
         loadAllData();

@@ -127,6 +127,7 @@ class MessageSentEvent(DomainEvent):
     sender_id: str = ""
     recipient_ids: Tuple[str, ...] = ()  # 接收者ID列表
     message_type: str = "text"
+    content: str = ""
 
 
 @dataclass(frozen=True)
