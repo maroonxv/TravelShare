@@ -10,7 +10,7 @@ import traceback
 from app_social.domain.aggregate.post_aggregate import Post
 from app_social.domain.aggregate.conversation_aggregate import Conversation
 from app_social.domain.value_objects.social_value_objects import (
-    PostContent, PostId, PostVisibility, MessageContent, ConversationId, ConversationType
+    PostContent, PostId, PostVisibility, MessageContent, ConversationId, ConversationType, ConversationRole
 )
 from app_social.infrastructure.database.repository_impl.post_repository_impl import PostRepositoryImpl
 from app_social.infrastructure.database.repository_impl.conversation_repository_impl import ConversationRepositoryImpl
@@ -422,6 +422,153 @@ class SocialService:
 
     # ==================== 会话管理 ====================
     
+    def create_group_chat(
+        self,
+        creator_id: str,
+        participant_ids: List[str],
+        title: str
+    ) -> Dict[str, Any]:
+        """创建群聊"""
+        session = SessionLocal()
+        try:
+            conv_dao = SqlAlchemyConversationDao(session)
+            msg_dao = SqlAlchemyMessageDao(session)
+            conv_repo = ConversationRepositoryImpl(conv_dao, msg_dao)
+            
+            # 1. 检查好友关系：所有被拉的人必须是创建者的好友
+            from app_social.infrastructure.database.dao_impl.sqlalchemy_friendship_dao import SqlAlchemyFriendshipDao
+            from app_social.infrastructure.database.repository_impl.friendship_repository_impl import FriendshipRepositoryImpl
+            from app_social.domain.value_objects.friendship_value_objects import FriendshipStatus
+            
+            friend_dao = SqlAlchemyFriendshipDao(session)
+            friend_repo = FriendshipRepositoryImpl(friend_dao)
+            
+            # 排除自己
+            targets = [uid for uid in participant_ids if uid != creator_id]
+            for target_id in targets:
+                 friendship = friend_repo.find_by_users(creator_id, target_id)
+                 if not friendship or friendship.status != FriendshipStatus.ACCEPTED:
+                     raise ValueError(f"User {target_id} is not your friend")
+            
+            # 2. 创建群聊
+            conv = Conversation.create_group(creator_id, participant_ids, title)
+            
+            conv_repo.save(conv)
+            self._event_bus.publish_all(conv.pop_events())
+            session.commit()
+            
+            return {"conversation_id": conv.id.value}
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    def add_group_member(
+        self,
+        conversation_id: str,
+        new_member_id: str,
+        operator_id: str
+    ) -> None:
+        """拉人进群"""
+        session = SessionLocal()
+        try:
+            conv_dao = SqlAlchemyConversationDao(session)
+            msg_dao = SqlAlchemyMessageDao(session)
+            conv_repo = ConversationRepositoryImpl(conv_dao, msg_dao)
+            
+            conv = conv_repo.find_by_id(ConversationId(conversation_id))
+            if not conv:
+                raise ValueError("Conversation not found")
+            
+            # 1. 检查好友关系
+            from app_social.infrastructure.database.dao_impl.sqlalchemy_friendship_dao import SqlAlchemyFriendshipDao
+            from app_social.infrastructure.database.repository_impl.friendship_repository_impl import FriendshipRepositoryImpl
+            from app_social.domain.value_objects.friendship_value_objects import FriendshipStatus
+            
+            friend_dao = SqlAlchemyFriendshipDao(session)
+            friend_repo = FriendshipRepositoryImpl(friend_dao)
+            
+            friendship = friend_repo.find_by_users(operator_id, new_member_id)
+            if not friendship or friendship.status != FriendshipStatus.ACCEPTED:
+                 raise ValueError(f"User {new_member_id} is not your friend")
+            
+            # 2. 调用聚合根方法
+            conv.add_participant(new_member_id, operator_id)
+            
+            conv_repo.save(conv)
+            self._event_bus.publish_all(conv.pop_events())
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    def remove_group_member(
+        self,
+        conversation_id: str,
+        target_user_id: str,
+        operator_id: str
+    ) -> None:
+        """踢人或退群"""
+        session = SessionLocal()
+        try:
+            conv_dao = SqlAlchemyConversationDao(session)
+            msg_dao = SqlAlchemyMessageDao(session)
+            conv_repo = ConversationRepositoryImpl(conv_dao, msg_dao)
+            
+            conv = conv_repo.find_by_id(ConversationId(conversation_id))
+            if not conv:
+                raise ValueError("Conversation not found")
+            
+            conv.remove_participant(target_user_id, operator_id)
+            
+            conv_repo.save(conv)
+            self._event_bus.publish_all(conv.pop_events())
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+            
+    def change_group_role(
+        self,
+        conversation_id: str,
+        target_user_id: str,
+        new_role_str: str,
+        operator_id: str
+    ) -> None:
+        """变更角色"""
+        session = SessionLocal()
+        try:
+            conv_dao = SqlAlchemyConversationDao(session)
+            msg_dao = SqlAlchemyMessageDao(session)
+            conv_repo = ConversationRepositoryImpl(conv_dao, msg_dao)
+            
+            conv = conv_repo.find_by_id(ConversationId(conversation_id))
+            if not conv:
+                raise ValueError("Conversation not found")
+            
+            try:
+                new_role = ConversationRole(new_role_str)
+            except ValueError:
+                raise ValueError(f"Invalid role: {new_role_str}")
+            
+            if new_role == ConversationRole.OWNER:
+                 conv.transfer_ownership(target_user_id, operator_id)
+            else:
+                 conv.change_role(target_user_id, new_role, operator_id)
+            
+            conv_repo.save(conv)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
     def create_private_chat(self, user1_id: str, user2_id: str) -> Dict[str, Any]:
         """创建私聊"""
         session = SessionLocal()
@@ -545,9 +692,13 @@ class SocialService:
                         other_user_name = info.get("name")
                         other_user_avatar = info.get("avatar")
                 
+                # Determine name
+                name = conv.title if conv.is_group else other_user_name
+
                 results.append({
                     "id": conv.id.value,
                     "type": conv.conversation_type.value,
+                    "name": name,
                     "title": conv.title, # Group title or None
                     "other_user_id": other_user_id,
                     "other_user_name": other_user_name,

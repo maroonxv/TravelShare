@@ -108,6 +108,14 @@ export const getFriendshipStatus = async (targetUserId) => {
     return response.data;
 };
 
+export const createGroupChat = async (title, participantIds) => {
+    const response = await client.post('/social/conversations/group', { 
+        title, 
+        participant_ids: participantIds 
+    });
+    return response.data;
+};
+
 export const searchUsers = async (query) => {
     const response = await client.get(`/auth/users?search=${encodeURIComponent(query)}`);
     return response.data;

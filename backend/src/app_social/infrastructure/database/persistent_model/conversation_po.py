@@ -4,7 +4,7 @@
 用于 SQLAlchemy ORM 映射，与数据库表对应。
 """
 from datetime import datetime
-from typing import Optional, Set, List
+from typing import Optional, Set, List, Dict
 
 from sqlalchemy import Column, String, DateTime, Text, Table, ForeignKey
 from sqlalchemy.orm import relationship
@@ -13,7 +13,7 @@ from shared.database.core import Base
 from app_social.domain.aggregate.conversation_aggregate import Conversation
 from app_social.domain.entity.message_entity import Message
 from app_social.domain.value_objects.social_value_objects import (
-    ConversationId, ConversationType, MessageContent
+    ConversationId, ConversationType, MessageContent, ConversationRole
 )
 
 
@@ -22,7 +22,8 @@ conversation_participants = Table(
     'conversation_participants',
     Base.metadata,
     Column('conversation_id', String(36), ForeignKey('conversations.id'), primary_key=True),
-    Column('user_id', String(36), primary_key=True)
+    Column('user_id', String(36), primary_key=True),
+    Column('role', String(20), nullable=False, default='member') # owner, admin, member
 )
 
 
@@ -43,11 +44,11 @@ class ConversationPO(Base):
     def __repr__(self) -> str:
         return f"ConversationPO(id={self.id}, type={self.conversation_type})"
     
-    def to_domain(self, participant_ids: Set[str], messages: List['MessagePO']) -> Conversation:
+    def to_domain(self, participants: Dict[str, ConversationRole], messages: List['MessagePO']) -> Conversation:
         """将持久化对象转换为领域实体
         
         Args:
-            participant_ids: 参与者ID集合
+            participants: 参与者ID及角色映射
             messages: 消息持久化对象列表
             
         Returns:
@@ -57,7 +58,7 @@ class ConversationPO(Base):
         
         return Conversation.reconstitute(
             conversation_id=ConversationId(self.id),
-            participant_ids=participant_ids,
+            participants=participants,
             messages=domain_messages,
             conversation_type=ConversationType(self.conversation_type),
             created_at=self.created_at,

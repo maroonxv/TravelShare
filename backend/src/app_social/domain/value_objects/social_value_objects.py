@@ -134,6 +134,25 @@ class ConversationType(Enum):
     GROUP = "group"      # 群聊
 
 
+class ConversationRole(Enum):
+    """会话角色枚举"""
+    OWNER = "owner"     # 群主
+    ADMIN = "admin"     # 管理员
+    MEMBER = "member"   # 普通成员
+    
+    def can_manage_admins(self) -> bool:
+        """是否可以管理管理员"""
+        return self == ConversationRole.OWNER
+        
+    def can_remove_member(self, target_role: 'ConversationRole') -> bool:
+        """是否可以移除目标角色的成员"""
+        if self == ConversationRole.OWNER:
+            return True  # 群主可以移除任何人（包括自己，即解散/退出）
+        if self == ConversationRole.ADMIN:
+            return target_role == ConversationRole.MEMBER # 管理员只能移除普通成员
+        return False
+
+
 @dataclass(frozen=True)
 class CommentContent:
     """评论内容值对象"""

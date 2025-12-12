@@ -4,7 +4,7 @@
 定义会话持久化对象的数据访问操作。
 """
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from app_social.infrastructure.database.persistent_model.conversation_po import ConversationPO
 
@@ -103,23 +103,23 @@ class IConversationDao(ABC):
         pass
 
     @abstractmethod
-    def get_participant_ids(self, conversation_id: str) -> List[str]:
-        """获取会话参与者ID列表
+    def get_participants_with_roles(self, conversation_id: str) -> List[Dict[str, str]]:
+        """获取会话参与者及角色
         
         Args:
             conversation_id: 会话ID
             
         Returns:
-            参与者ID列表
+            参与者列表 [{"user_id": "...", "role": "..."}]
         """
         pass
 
     @abstractmethod
-    def update_participants(self, conversation_id: str, participant_ids: List[str]) -> None:
+    def update_participants(self, conversation_id: str, participants: List[Dict[str, str]]) -> None:
         """更新会话参与者
         
         Args:
             conversation_id: 会话ID
-            participant_ids: 参与者ID列表
+            participants: 参与者列表 [{"user_id": "...", "role": "..."}]
         """
         pass

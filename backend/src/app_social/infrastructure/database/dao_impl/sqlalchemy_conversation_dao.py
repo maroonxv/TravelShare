@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
 from sqlalchemy import select, delete, exists, desc, and_, func, insert
 
@@ -12,13 +12,17 @@ class SqlAlchemyConversationDao(IConversationDao):
     def __init__(self, session: Session):
         self.session = session
 
-    def get_participant_ids(self, conversation_id: str) -> List[str]:
-        stmt = select(conversation_participants.c.user_id).where(
+    def get_participants_with_roles(self, conversation_id: str) -> List[Dict[str, str]]:
+        stmt = select(
+            conversation_participants.c.user_id,
+            conversation_participants.c.role
+        ).where(
             conversation_participants.c.conversation_id == conversation_id
         )
-        return list(self.session.execute(stmt).scalars().all())
+        rows = self.session.execute(stmt).all()
+        return [{"user_id": row.user_id, "role": row.role} for row in rows]
 
-    def update_participants(self, conversation_id: str, participant_ids: List[str]) -> None:
+    def update_participants(self, conversation_id: str, participants: List[Dict[str, str]]) -> None:
         # 1. Delete existing
         stmt = delete(conversation_participants).where(
             conversation_participants.c.conversation_id == conversation_id
@@ -26,8 +30,15 @@ class SqlAlchemyConversationDao(IConversationDao):
         self.session.execute(stmt)
         
         # 2. Insert new
-        if participant_ids:
-            values = [{"conversation_id": conversation_id, "user_id": uid} for uid in participant_ids]
+        if participants:
+            values = [
+                {
+                    "conversation_id": conversation_id, 
+                    "user_id": p["user_id"],
+                    "role": p["role"]
+                } 
+                for p in participants
+            ]
             stmt = insert(conversation_participants).values(values)
             self.session.execute(stmt)
             

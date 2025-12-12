@@ -274,6 +274,67 @@ def get_messages(conv_id):
     except Exception as e:
         return _handle_error(e)
 
+@social_bp.route('/conversations/group', methods=['POST'])
+def create_group_chat():
+    """创建群聊"""
+    try:
+        user_id = _get_current_user_id()
+        data = request.get_json()
+        title = data.get('title')
+        participant_ids = data.get('participant_ids', [])
+        
+        if not title:
+            return jsonify({"error": "Title is required"}), 400
+        if not participant_ids:
+            return jsonify({"error": "Participants are required"}), 400
+            
+        result = social_service.create_group_chat(user_id, participant_ids, title)
+        return jsonify(result), 201
+    except Exception as e:
+        return _handle_error(e)
+
+@social_bp.route('/conversations/<conv_id>/participants', methods=['POST'])
+def add_group_participant(conv_id):
+    """拉人进群"""
+    try:
+        user_id = _get_current_user_id()
+        data = request.get_json()
+        new_member_id = data.get('user_id')
+        
+        if not new_member_id:
+            return jsonify({"error": "user_id is required"}), 400
+            
+        social_service.add_group_member(conv_id, new_member_id, user_id)
+        return jsonify({"message": "Participant added"}), 200
+    except Exception as e:
+        return _handle_error(e)
+
+@social_bp.route('/conversations/<conv_id>/participants/<target_user_id>', methods=['DELETE'])
+def remove_group_participant(conv_id, target_user_id):
+    """踢人或退群"""
+    try:
+        user_id = _get_current_user_id()
+        social_service.remove_group_member(conv_id, target_user_id, user_id)
+        return jsonify({"message": "Participant removed"}), 200
+    except Exception as e:
+        return _handle_error(e)
+
+@social_bp.route('/conversations/<conv_id>/participants/<target_user_id>/role', methods=['PUT'])
+def change_group_role(conv_id, target_user_id):
+    """变更角色（任命管理员/转让群主）"""
+    try:
+        user_id = _get_current_user_id()
+        data = request.get_json()
+        new_role = data.get('role') # admin, owner, member
+        
+        if not new_role:
+             return jsonify({"error": "role is required"}), 400
+             
+        social_service.change_group_role(conv_id, target_user_id, new_role, user_id)
+        return jsonify({"message": "Role updated"}), 200
+    except Exception as e:
+        return _handle_error(e)
+
 # ==================== 好友管理 API ====================
 
 from app_social.services.friendship_service import FriendshipService
@@ -340,28 +401,10 @@ def get_friends():
     """获取好友列表"""
     try:
         user_id = _get_current_user_id()
-        # Requirement says "return list of friends". 
-        # Ideally we return user info, but Service 'get_friends' returns list of IDs.
-        # We might need to enrich this with user details (Name, Avatar).
-        # Similar to how 'get_public_feed' does it.
-        # Let's import User Repo to fetch details.
-        # But View shouldn't access Repo directly?
-        # Better: Update Service to return enriched data or do it here via another service method?
-        # Existing social_service uses Repo in `_post_to_dto`.
-        # Let's stick to simple implementation: Return IDs for now, or fetch Details if possible.
-        # The prompt says: "When user visits profile... message page... view friends".
-        # We probably need Names/Avatars.
-        # Let's assume we need to fetch user details.
-        friend_ids = friendship_service.get_friends(user_id)
+        # friendship_service.get_friends already returns enriched user data
+        friends_data = friendship_service.get_friends(user_id)
         
-        # Determine if we can fetch user details quickly.
-        # We can use SocialService or User Service helper?
-        # Let's reuse the logic from social_service (fetching users).
-        # OR: Just return IDs and let frontend fetch profiles? (N+1 problem).
-        # Let's try to fetch here using the same pattern as `get_public_feed` if I can access UserRepo.
-        # But I don't want to overcomplicate `view`.
-        # For now, return IDs.
-        return jsonify({"friends": friend_ids}), 200
+        return jsonify({"friends": friends_data}), 200
     except Exception as e:
         return _handle_error(e)
 

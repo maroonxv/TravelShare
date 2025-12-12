@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from app_social.domain.aggregate.conversation_aggregate import Conversation
 from app_social.domain.entity.message_entity import Message
-from app_social.domain.value_objects.social_value_objects import ConversationId, ConversationType, MessageContent
+from app_social.domain.value_objects.social_value_objects import ConversationId, ConversationType, MessageContent, ConversationRole
 from app_social.infrastructure.database.dao_impl.sqlalchemy_conversation_dao import SqlAlchemyConversationDao
 from app_social.infrastructure.database.dao_impl.sqlalchemy_message_dao import SqlAlchemyMessageDao
 from app_social.infrastructure.database.repository_impl.conversation_repository_impl import ConversationRepositoryImpl
@@ -54,7 +54,7 @@ class TestConversationRepositoryIntegration:
         # 1. Create Conv via Repo
         conv = Conversation.reconstitute(
             conversation_id=ConversationId(cid),
-            participant_ids={u1, u2},
+            participants={u1: ConversationRole.MEMBER, u2: ConversationRole.MEMBER},
             messages=[],
             conversation_type=ConversationType.PRIVATE,
             created_at=datetime.utcnow()

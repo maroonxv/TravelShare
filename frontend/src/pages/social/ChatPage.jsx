@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { Send, User, Check, X, MessageSquare, ArrowLeft, Paperclip, Smile, Plus, Users, UserPlus } from 'lucide-react';
 import AddFriendModal from './AddFriendModal';
+import CreateGroupModal from './CreateGroupModal';
 import styles from './ChatPage.module.css';
 
 const ChatPage = () => {
@@ -25,6 +26,7 @@ const ChatPage = () => {
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
     const [showAddFriend, setShowAddFriend] = useState(false);
+    const [showCreateGroup, setShowCreateGroup] = useState(false);
     const [showDropdown, setShowDropdown] = useState(false);
     const messagesEndRef = useRef(null);
     const dropdownRef = useRef(null);
@@ -212,7 +214,7 @@ const ChatPage = () => {
                                     <UserPlus size={16} />
                                     <span>Add Friend</span>
                                 </button>
-                                <button className={styles.dropdownItem} onClick={() => setShowDropdown(false)}>
+                                <button className={styles.dropdownItem} onClick={() => { setShowCreateGroup(true); setShowDropdown(false); }}>
                                     <Users size={16} />
                                     <span>Create Group</span>
                                 </button>
@@ -373,6 +375,12 @@ const ChatPage = () => {
             </div>
 
             {showAddFriend && <AddFriendModal onClose={() => setShowAddFriend(false)} />}
+            {showCreateGroup && (
+                <CreateGroupModal 
+                    onClose={() => setShowCreateGroup(false)} 
+                    onSuccess={loadAllData} 
+                />
+            )}
         </div>
     );
 };
