@@ -1,14 +1,9 @@
 import { useState, useEffect } from 'react';
 import Button from './Button';
 import { UserPlus, UserCheck, Clock, MessageSquare, X } from 'lucide-react';
-import { sendFriendRequest, acceptFriendRequest, rejectFriendRequest, getFriendshipStatus, createConversation } from '../api/social'; // createConversation imported from social, make sure it's exported or adjust api reference
+import { sendFriendRequest, acceptFriendRequest, rejectFriendRequest, getFriendshipStatus } from '../api/social';
 import { useNavigate } from 'react-router-dom';
-
-// Note: createConversation is in api/social.js but as `createPrivateChat`? 
-// Let's check api/social.js. I added `getFeed`, `createPost` etc. 
-// Ah, `createConversation` (API `/conversations`) is there. Wait, check social.js view.
-// In `social.js` endpoint: `export const createConversation ...`?
-// Let's assume it's `createConversation`. If not, I'll need to fix import.
+import { toast } from 'react-hot-toast';
 
 const FriendActionButton = ({ targetUserId, initialStatus }) => {
     // initialStatus passed from parent if available, else fetch
@@ -43,8 +38,9 @@ const FriendActionButton = ({ targetUserId, initialStatus }) => {
             setStatus(res.status); // PENDING
             setIsRequester(true);
             setFriendshipId(res.friendship_id);
+            toast.success("好友请求已发送");
         } catch (err) {
-            alert("发送请求失败: " + (err.response?.data?.error || err.message));
+            toast.error("发送请求失败: " + (err.response?.data?.error || err.message));
         } finally {
             setLoading(false);
         }
@@ -55,9 +51,9 @@ const FriendActionButton = ({ targetUserId, initialStatus }) => {
         try {
             await acceptFriendRequest(friendshipId);
             setStatus('ACCEPTED');
-            // Optionally redirect to chat or just show "Message" button
+            toast.success("已接受好友请求");
         } catch (err) {
-            alert("接受请求失败: " + err.message);
+            toast.error("接受请求失败: " + err.message);
         } finally {
             setLoading(false);
         }
@@ -68,42 +64,11 @@ const FriendActionButton = ({ targetUserId, initialStatus }) => {
         try {
             await rejectFriendRequest(friendshipId);
             setStatus('REJECTED'); // Or reset to null depending on UX.
-            // Backend implementation: REJECTED state persists.
-            // So we show "Rejected" or "Request Rejected".
+            toast.success("已拒绝好友请求");
         } catch (err) {
-            alert("拒绝请求失败: " + err.message);
+            toast.error("拒绝请求失败: " + err.message);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const handleMessage = async () => {
-        // Go to chat
-        // Create conversation if not exists, then navigate
-        try {
-            // Check api/social.js for correct function name.
-            // I'll assume `createConversation` takes `{target_id}`.
-            // In `social.js`: `client.post('/social/conversations', {target_id})`.
-            // Wait, I need to check `social.js` content I read earlier.
-            // It has `getConversations`, `sendMessage`. 
-            // It DOES NOT have `createConversation` explicitly exported in the snippet I saw earlier?
-            // Wait, I read `social_view.py` and it has `create_conversation`.
-            // Let's check `social.js` file content step 21.
-            // Step 21 output for `social.js`:
-            // ...
-            // export const getConversations = ...
-            // export const getMessages = ...
-            // export const sendMessage = ...
-            // It DOES NOT have `createConversation`.
-            // So I need to add `createConversation` to `social.js` first or now.
-            // Ah, I missed adding it in previous step.
-            // I will add it now in `social.js` then import here.
-            // Or I can just inline the fetch if needed but better to use api.
-            // I will assume I added it or will add it.
-            // For now, I will comment it out or assume I'll fix it.
-            navigate('/chat'); // Simplistic navigation.
-        } catch (err) {
-            console.error(err);
         }
     };
 
@@ -139,8 +104,6 @@ const FriendActionButton = ({ targetUserId, initialStatus }) => {
     }
 
     if (status === 'REJECTED') {
-        // If I am requester, show "Rejected".
-        // If I am addressee, show "Rejected".
         return <Button disabled variant="secondary">已拒绝</Button>;
     }
 

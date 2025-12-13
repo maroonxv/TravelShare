@@ -5,6 +5,8 @@ import styles from './ProfilePage.module.css'; // Reuse profile styles for consi
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import Card from '../../components/Card';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import { toast } from 'react-hot-toast';
 import { Save, Lock, User, ArrowLeft } from 'lucide-react';
 
 const ManageProfilePage = () => {
@@ -26,7 +28,6 @@ const ManageProfilePage = () => {
         confirmPassword: '' 
     });
     
-    const [message, setMessage] = useState({ type: '', text: '' });
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -56,7 +57,6 @@ const ManageProfilePage = () => {
     const handleProfileUpdate = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setMessage({ type: '', text: '' });
         try {
             const formData = new FormData();
             formData.append('bio', profileData.bio);
@@ -69,9 +69,9 @@ const ManageProfilePage = () => {
             }
 
             await updateProfile(formData);
-            setMessage({ type: 'success', text: '个人资料已更新' });
+            toast.success("个人资料已更新");
         } catch (error) {
-            setMessage({ type: 'error', text: error.response?.data?.error || '更新失败' });
+            toast.error(error.response?.data?.error || '更新失败');
         } finally {
             setLoading(false);
         }
@@ -80,24 +80,23 @@ const ManageProfilePage = () => {
     const handlePasswordChange = async (e) => {
         e.preventDefault();
         if (passData.newPassword !== passData.confirmPassword) {
-            setMessage({ type: 'error', text: '新密码不匹配' });
+            toast.error("新密码不匹配");
             return;
         }
 
         setLoading(true);
-        setMessage({ type: '', text: '' });
         try {
             await updatePassword(passData.oldPassword, passData.newPassword);
-            setMessage({ type: 'success', text: '密码修改成功' });
+            toast.success("密码修改成功");
             setPassData({ oldPassword: '', newPassword: '', confirmPassword: '' });
         } catch (error) {
-            setMessage({ type: 'error', text: error.response?.data?.error || '密码修改失败' });
+            toast.error(error.response?.data?.error || '密码修改失败');
         } finally {
             setLoading(false);
         }
     };
 
-    if (!user) return <div>加载中...</div>;
+    if (!user) return <div className={styles.loadingContainer}><LoadingSpinner size="large" /></div>;
 
     return (
         <div className={styles.container}>
@@ -105,7 +104,6 @@ const ManageProfilePage = () => {
                 variant="ghost" 
                 onClick={() => navigate('/profile')}
                 className={styles.backButton}
-                style={{ marginBottom: '1rem', paddingLeft: 0 }}
             >
                 <ArrowLeft size={20} /> 返回个人主页
             </Button>
@@ -117,40 +115,18 @@ const ManageProfilePage = () => {
                 </div>
             </div>
 
-            {message.text && (
-                <div className={`message ${message.type}`} style={{ marginBottom: '1rem', padding: '1rem', borderRadius: '8px', backgroundColor: message.type === 'error' ? '#fee2e2' : '#dcfce7', color: message.type === 'error' ? '#ef4444' : '#22c55e' }}>
-                    {message.text}
-                </div>
-            )}
-
             <div className={styles.grid}>
                 <Card title="基本资料" className={styles.infoCard}>
                     <form onSubmit={handleProfileUpdate}>
-                        <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
-                            <div style={{ 
-                                width: '100px', 
-                                height: '100px', 
-                                borderRadius: '50%', 
-                                overflow: 'hidden', 
-                                margin: '0 auto 1rem',
-                                backgroundColor: '#f3f4f6',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                border: '2px solid var(--border-color)'
-                            }}>
+                        <div className={styles.avatarUploadContainer}>
+                            <div className={styles.avatarPreview}>
                                 {avatarPreview ? (
-                                    <img src={avatarPreview} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <img src={avatarPreview} alt="Avatar" className={styles.avatarImage} />
                                 ) : (
                                     <User size={48} color="#9ca3af" />
                                 )}
                             </div>
-                            <label htmlFor="avatar-upload" style={{ 
-                                cursor: 'pointer', 
-                                color: 'var(--primary-color)', 
-                                fontWeight: 500,
-                                fontSize: '0.9rem'
-                            }}>
+                            <label htmlFor="avatar-upload" className={styles.avatarLabel}>
                                 更换头像
                             </label>
                             <input 
@@ -175,21 +151,11 @@ const ManageProfilePage = () => {
                                 value={profileData.bio}
                                 onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
                                 className={styles.textarea}
-                                style={{ 
-                                    width: '100%', 
-                                    padding: '0.75rem', 
-                                    borderRadius: '0.5rem', 
-                                    border: '1px solid var(--border-color)',
-                                    backgroundColor: 'var(--bg-primary)',
-                                    color: 'var(--text-primary)',
-                                    minHeight: '100px',
-                                    fontFamily: 'inherit'
-                                }}
                                 placeholder="介绍一下你自己..."
                             />
                         </div>
-                        <Button type="submit" loading={loading} fullWidth icon={<Save size={18} />}>
-                            保存资料
+                        <Button type="submit" disabled={loading} fullWidth icon={<Save size={18} />}>
+                            {loading ? '保存中...' : '保存资料'}
                         </Button>
                     </form>
                 </Card>
@@ -220,8 +186,8 @@ const ManageProfilePage = () => {
                             required
                             icon={<Lock size={18} />}
                         />
-                        <Button type="submit" loading={loading} fullWidth variant="secondary">
-                            修改密码
+                        <Button type="submit" disabled={loading} fullWidth variant="secondary">
+                            {loading ? '保存中...' : '修改密码'}
                         </Button>
                     </form>
                 </Card>

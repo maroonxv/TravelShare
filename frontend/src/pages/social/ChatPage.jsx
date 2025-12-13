@@ -13,9 +13,11 @@ import {
     createConversation
 } from '../../api/social';
 import { useAuth } from '../../context/AuthContext';
-import { Send, User, Check, X, MessageSquare, ArrowLeft, Paperclip, Smile, Plus, Users, UserPlus, Image as ImageIcon } from 'lucide-react';
+import { Send, User, Check, X, MessageSquare, ArrowLeft, Smile, Plus, Users, UserPlus, Image as ImageIcon } from 'lucide-react';
 import AddFriendModal from './AddFriendModal';
 import CreateGroupModal from './CreateGroupModal';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import toast from 'react-hot-toast';
 import styles from './ChatPage.module.css';
 
 const ChatPage = () => {
@@ -146,6 +148,7 @@ const ChatPage = () => {
             }
         } catch (error) {
             console.error("Failed to load data", error);
+            toast.error("加载数据失败");
         } finally {
             setLoading(false);
         }
@@ -157,6 +160,7 @@ const ChatPage = () => {
             setMessages(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Failed to load messages", error);
+            toast.error("加载消息失败");
         }
     };
 
@@ -165,7 +169,7 @@ const ChatPage = () => {
         if (!file) return;
 
         if (!file.type.startsWith('image/')) {
-            alert('不支持的文件类型，请选择图片');
+            toast.error('不支持的文件类型，请选择图片');
             return;
         }
 
@@ -212,7 +216,7 @@ const ChatPage = () => {
             // setConversations(convs);
         } catch (error) {
             console.error("Failed to send message", error);
-            alert("发送失败");
+            toast.error("发送失败");
         }
     };
     
@@ -233,9 +237,10 @@ const ChatPage = () => {
     const handleAcceptRequest = async (id) => {
         try {
             await acceptFriendRequest(id);
+            toast.success("已接受好友请求");
             loadAllData();
         } catch (err) {
-            alert(err.message);
+            toast.error(err.message);
         }
     };
 
@@ -243,8 +248,9 @@ const ChatPage = () => {
         try {
             await rejectFriendRequest(id);
             setRequests(prev => prev.filter(r => r.id !== id));
+            toast.success("已拒绝好友请求");
         } catch (err) {
-            alert(err.message);
+            toast.error(err.message);
         }
     };
 
@@ -263,7 +269,7 @@ const ChatPage = () => {
             }
         } catch (err) {
             console.error("Failed to start chat", err);
-            alert("Could not start chat");
+            toast.error("无法开始聊天");
         }
     };
 
@@ -349,8 +355,8 @@ const ChatPage = () => {
                                     </div>
                                     <span className={styles.itemName}>{req.other_user?.name || "未知用户"}</span>
                                     <div className={styles.itemMeta} style={{display: 'flex', gap: 8}}>
-                                        <button onClick={(e) => { e.stopPropagation(); handleAcceptRequest(req.id); }} style={{color: '#4ade80'}}><Check size={18}/></button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleRejectRequest(req.id); }} style={{color: '#f87171'}}><X size={18}/></button>
+                                        <button onClick={(e) => { e.stopPropagation(); handleAcceptRequest(req.id); }} style={{color: '#4ade80', background: 'none', border: 'none', cursor: 'pointer'}}><Check size={18}/></button>
+                                        <button onClick={(e) => { e.stopPropagation(); handleRejectRequest(req.id); }} style={{color: '#f87171', background: 'none', border: 'none', cursor: 'pointer'}}><X size={18}/></button>
                                     </div>
                                     <span className={styles.itemPreview}>好友请求</span>
                                 </div>
@@ -378,9 +384,9 @@ const ChatPage = () => {
 
                     {/* Conversations */}
                     <div className={styles.sectionTitle}>聊天</div>
-                    {loading && <div style={{padding: 20, textAlign: 'center', color: '#666'}}>加载中...</div>}
+                    {loading && <div className={styles.loadingContainer}><LoadingSpinner size="medium" /></div>}
                     {!loading && conversations.length === 0 && (
-                        <div style={{padding: 20, textAlign: 'center', color: '#666'}}>暂无聊天</div>
+                        <div className={styles.emptyState}>暂无聊天</div>
                     )}
                     {conversations.map(conv => (
                         <div

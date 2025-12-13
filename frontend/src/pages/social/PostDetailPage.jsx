@@ -4,6 +4,8 @@ import { getPost, addComment, getComments } from '../../api/social';
 import PostCard from '../../components/PostCard';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import { toast } from 'react-hot-toast';
 import { Send, ArrowLeft } from 'lucide-react';
 import styles from './PostDetailPage.module.css';
 
@@ -31,6 +33,7 @@ const PostDetailPage = () => {
                 }
             } catch (error) {
                 console.error("Failed to load post", error);
+                toast.error("加载帖子失败");
             } finally {
                 setLoading(false);
             }
@@ -45,17 +48,19 @@ const PostDetailPage = () => {
         try {
             await addComment(id, newComment);
             setNewComment('');
+            toast.success("评论已发布");
             // Refresh post/comments
             const postData = await getPost(id); // Simple reload
             setPost(postData);
             if (postData.comments) setComments(postData.comments);
         } catch (error) {
             console.error("Failed to add comment", error);
+            toast.error("评论失败");
         }
     };
 
-    if (loading) return <div style={{ padding: '2rem' }}>加载中...</div>;
-    if (!post) return <div style={{ padding: '2rem' }}>帖子未找到</div>;
+    if (loading) return <div className={styles.loading}><LoadingSpinner size="large" /></div>;
+    if (!post) return <div className={styles.notFound}>帖子未找到</div>;
 
     return (
         <div className={styles.container}>
@@ -74,15 +79,15 @@ const PostDetailPage = () => {
                     ) : (
                         comments.map((comment, index) => (
                             <div key={index} className={styles.comment}>
-                                <Link to={`/users/${comment.author_id}`} className={styles.commentAvatar} style={{ textDecoration: 'none' }}>
+                                <Link to={`/users/${comment.author_id}`} className={`${styles.commentAvatar} ${styles.commentAvatarLink}`}>
                                     {comment.author_avatar ? (
-                                        <img src={comment.author_avatar} alt={comment.author_name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                                        <img src={comment.author_avatar} alt={comment.author_name} className={styles.avatarImg} />
                                     ) : (
                                         (comment.author_name || 'U').charAt(0).toUpperCase()
                                     )}
                                 </Link>
                                 <div className={styles.commentContent}>
-                                    <Link to={`/users/${comment.author_id}`} className={styles.commentUser} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                    <Link to={`/users/${comment.author_id}`} className={styles.commentUserLink}>
                                         {comment.author_name || 'User'}
                                     </Link>
                                     <p className={styles.commentText}>{comment.content}</p>

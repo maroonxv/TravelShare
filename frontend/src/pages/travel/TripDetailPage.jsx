@@ -3,12 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getTrip, updateTrip } from '../../api/travel';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/Button';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import AddActivityModal from './AddActivityModal';
 import EditActivityModal from './EditActivityModal';
 import AddMemberModal from './AddMemberModal';
 import TripMembersModal from './TripMembersModal';
 import EditTripModal from './EditTripModal';
 import { Calendar, Users, DollarSign, MapPin, Clock, ArrowRight, ArrowLeft, Plus, Edit2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import styles from './TripDetail.module.css';
 
 const TripDetailPage = () => {
@@ -35,6 +37,7 @@ const TripDetailPage = () => {
             setTrip(data);
         } catch (error) {
             console.error("Failed to load trip", error);
+            toast.error("加载旅行详情失败");
         } finally {
             setLoading(false);
         }
@@ -45,13 +48,14 @@ const TripDetailPage = () => {
             const updatedTrip = await updateTrip(trip.id, { status: newStatus });
             setTrip(updatedTrip);
             setIsEditingStatus(false);
+            toast.success("状态已更新");
         } catch (error) {
             console.error("Failed to update status", error);
-            alert("更新状态失败");
+            toast.error("更新状态失败");
         }
     };
 
-    if (loading) return <div className={styles.loading}>加载旅行详情...</div>;
+    if (loading) return <div className={styles.loading}><LoadingSpinner size="large" /></div>;
     if (!trip) return <div className={styles.container}>未找到旅行</div>;
 
     const days = trip.days || [];

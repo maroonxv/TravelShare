@@ -109,7 +109,8 @@
 
 .loading,
 .endMessage {
-    text-align: center;
+    display: flex;
+    justify-content: center;
     padding: var(--spacing-lg);
     color: var(--text-secondary);
 }
@@ -118,4 +119,19 @@
     display: flex;
     justify-content: center;
     margin-top: var(--spacing-xl);
+}
+
+.titleContainer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.clearBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #64748b;
+    display: flex;
+    align-items: center;
 }

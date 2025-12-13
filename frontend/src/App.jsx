@@ -25,10 +25,13 @@ import TripDetailPage from './pages/travel/TripDetailPage';
 import AdminLayout from './admin/components/AdminLayout';
 import AdminResourcePage from './admin/pages/AdminResourcePage';
 
+import { Toaster } from 'react-hot-toast';
+
 function App() {
   return (
     <Router>
       <AuthProvider>
+        <Toaster position="top-right" />
         <Routes>
           {/* Public Routes */}
           <Route path="/auth/login" element={<LoginPage />} />

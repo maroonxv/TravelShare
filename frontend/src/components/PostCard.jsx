@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, MapPin, Trash2, Share2 } from 'lucide-react';
+import { Heart, MessageCircle, MapPin, Trash2, Share2, Image as ImageIcon, FileText } from 'lucide-react';
 import Card from './Card';
 import styles from './PostCard.module.css';
 import { likePost, deletePost } from '../api/social';
 import { useAuth } from '../context/AuthContext';
 import ShareModal from '../pages/social/ShareModal';
+import { toast } from 'react-hot-toast';
 
 const PostCard = ({ post, onDelete }) => {
     const { user } = useAuth();
@@ -23,6 +24,7 @@ const PostCard = ({ post, onDelete }) => {
             setLikes(prev => data.is_liked ? prev + 1 : prev - 1);
         } catch (error) {
             console.error("Failed to like post", error);
+            toast.error("操作失败");
         }
     };
 
@@ -31,6 +33,7 @@ const PostCard = ({ post, onDelete }) => {
         setIsDeleting(true);
         try {
             await deletePost(post.id);
+            toast.success("帖子已删除");
             if (onDelete) {
                 onDelete(post.id);
             } else {
@@ -38,7 +41,7 @@ const PostCard = ({ post, onDelete }) => {
             }
         } catch (error) {
             console.error("Failed to delete post", error);
-            alert("删除失败");
+            toast.error("删除失败");
             setIsDeleting(false);
         }
     };
@@ -49,45 +52,43 @@ const PostCard = ({ post, onDelete }) => {
         navigate(`/social/post/${post.id}`);
     };
 
-    const renderMediaGrid = () => {
-        if (!post.media_urls || post.media_urls.length === 0) return null;
+    const renderMediaArea = () => {
+        const hasMedia = post.media_urls && post.media_urls.length > 0;
 
-        const count = post.media_urls.length;
-        let gridClass = styles.grid1;
-        let showCount = count;
-
-        if (count === 2) {
-            gridClass = styles.grid2;
-        } else if (count === 3) {
-            gridClass = styles.grid3;
-        } else if (count >= 4) {
-            gridClass = styles.grid4;
-            showCount = 4; // 只显示前4张
-        }
-
-        return (
-            <div className={`${styles.mediaGrid} ${gridClass}`}>
-                {post.media_urls.slice(0, showCount).map((url, index) => (
-                    <div 
-                        key={index} 
-                        className={styles.mediaItem}
-                        onClick={(e) => handleImageClick(e, index)}
-                    >
-                        <img src={url} alt={`Post media ${index + 1}`} className={styles.image} />
-                        {count > 4 && index === 3 && (
-                            <div className={styles.moreOverlay}>
-                                +{count - 4}
-                            </div>
-                        )}
+        if (hasMedia) {
+            return (
+                <div className={styles.mediaArea} onClick={handleImageClick} style={{ cursor: 'pointer' }}>
+                    <img src={post.media_urls[0]} alt="Post Cover" className={styles.mediaCover} />
+                    {post.media_urls.length > 1 && (
+                        <div className={styles.imageBadge}>
+                            <ImageIcon size={12} />
+                            <span>{post.media_urls.length}</span>
+                        </div>
+                    )}
+                </div>
+            );
+        } else {
+            return (
+                <div className={styles.mediaArea}>
+                    <div className={styles.placeholder}>
+                        <div className={styles.placeholderIcon}>
+                            {post.trip ? <MapPin size={32} /> : <FileText size={32} />}
+                        </div>
+                        <div className={styles.placeholderText}>
+                            {post.title || post.content}
+                        </div>
                     </div>
-                ))}
-            </div>
-        );
+                </div>
+            );
+        }
     };
 
     return (
         <Card className={styles.postCard}>
-            {/* 1. Header: User Info & Actions */}
+            {/* 1. Top: Media Area (Fixed Height) */}
+            {renderMediaArea()}
+
+            {/* 2. Header: User Info */}
             <div className={styles.header}>
                 <Link to={`/users/${post.author_id}`} className={styles.userInfo} style={{ textDecoration: 'none', color: 'inherit' }}>
                     <div className={styles.avatar}>
@@ -116,8 +117,9 @@ const PostCard = ({ post, onDelete }) => {
                 </div>
             </div>
 
-            {/* 2. Content: Title & Text */}
+            {/* 3. Content: Text */}
             <div className={styles.content}>
+                {/* 如果是无图模式且标题已在占位符显示，这里可以隐藏标题，或者保留以保持一致性。这里保留。 */}
                 <Link to={`/social/post/${post.id}`} className={styles.titleLink}>
                     <h3 className={styles.title}>{post.title || '无标题帖子'}</h3>
                 </Link>
@@ -126,8 +128,6 @@ const PostCard = ({ post, onDelete }) => {
                     <p className={`${styles.text} ${!isExpanded ? styles.textCollapsed : ''}`}>
                         {post.content}
                     </p>
-                    {/* 简单的判断：如果字数很多才显示展开按钮。这里暂时简单处理，或者一直显示如果被截断。
-                        由于 CSS line-clamp 很难检测是否溢出，这里用字数做一个近似判断 */}
                     {post.content && post.content.length > 100 && (
                         <button 
                             className={styles.expandBtn}
@@ -161,9 +161,6 @@ const PostCard = ({ post, onDelete }) => {
                     </div>
                 )}
             </div>
-
-            {/* 3. Media: Grid Layout */}
-            {renderMediaGrid()}
 
             {/* 4. Footer: Actions */}
             <div className={styles.actions}>

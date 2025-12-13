@@ -4,6 +4,8 @@ import { Plus, X, Search } from 'lucide-react';
 import { getFeed } from '../../api/social';
 import PostCard from '../../components/PostCard';
 import Button from '../../components/Button';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import { toast } from 'react-hot-toast';
 import styles from './FeedPage.module.css';
 
 const FeedPage = () => {
@@ -46,6 +48,7 @@ const FeedPage = () => {
                 setHasMore(newPosts.length === LIMIT);
             } catch (error) {
                 console.error('Failed to fetch feed', error);
+                toast.error("获取动态失败");
             } finally {
                 setLoading(false);
             }
@@ -70,6 +73,7 @@ const FeedPage = () => {
             setHasMore(newPosts.length === LIMIT);
         } catch (error) {
             console.error('Failed to fetch more posts', error);
+            toast.error("加载更多失败");
         } finally {
             setLoading(false);
         }
@@ -96,12 +100,12 @@ const FeedPage = () => {
     const renderHeader = () => (
         <div className={styles.header}>
             <div className={styles.topRow}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div className={styles.titleContainer}>
                     <h1 className={styles.title}>
                         {currentTag ? `标签: #${currentTag}` : '社区动态'}
                     </h1>
                     {currentTag && (
-                        <button onClick={clearTag} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                        <button onClick={clearTag} className={styles.clearBtn}>
                             <X size={20} />
                         </button>
                     )}
@@ -162,7 +166,7 @@ const FeedPage = () => {
                 ))}
             </div>
 
-            {loading && <div className={styles.loading}>加载中...</div>}
+            {loading && <div className={styles.loading}><LoadingSpinner size="medium" /></div>}
 
             {!loading && hasMore && (
                 <div className={styles.loadMore}>

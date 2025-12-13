@@ -4,6 +4,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import { toast } from 'react-hot-toast';
 import styles from './Auth.module.css';
 
 const RegisterPage = () => {
@@ -26,7 +28,10 @@ const RegisterPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (formData.password !== formData.confirmPassword) {
-            return setError("两次输入的密码不一致");
+            const msg = "两次输入的密码不一致";
+            setError(msg);
+            toast.error(msg);
+            return;
         }
 
         setError('');
@@ -40,11 +45,13 @@ const RegisterPage = () => {
                 password: formData.password,
                 role: formData.role
             });
+            toast.success("注册成功");
             navigate('/social');
         } catch (err) {
             console.error('Registration failed', err);
             const errMsg = err.response?.data?.error || err.message || '注册失败，请重试。';
             setError(errMsg);
+            toast.error(errMsg);
         } finally {
             setLoading(false);
         }
@@ -94,7 +101,12 @@ const RegisterPage = () => {
                     {error && <div className={styles.error}>{error}</div>}
 
                     <Button type="submit" variant="primary" className={styles.submitBtn} disabled={loading}>
-                        {loading ? '正在创建账号...' : '注册'}
+                        {loading ? (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <LoadingSpinner size="small" />
+                                <span>正在创建账号...</span>
+                            </div>
+                        ) : '注册'}
                     </Button>
 
                     <div className={styles.footer}>

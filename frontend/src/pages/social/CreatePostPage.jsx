@@ -6,6 +6,8 @@ import { getUserTrips } from '../../api/travel';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import Card from '../../components/Card';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import { toast } from 'react-hot-toast';
 import { Image as ImageIcon, MapPin, X } from 'lucide-react';
 import styles from './CreatePostPage.module.css';
 
@@ -37,6 +39,7 @@ const CreatePostPage = () => {
             setMyTrips(Array.isArray(trips) ? trips : (trips.trips || []));
         } catch (error) {
             console.error("Failed to load trips", error);
+            toast.error("加载旅行列表失败");
         }
     };
 
@@ -76,10 +79,11 @@ const CreatePostPage = () => {
 
         try {
             await createPost(formData);
+            toast.success("发布帖子成功");
             navigate('/social');
         } catch (error) {
             console.error("Failed to create post", error);
-            alert("发布帖子失败");
+            toast.error("发布帖子失败");
         } finally {
             setLoading(false);
         }
@@ -109,21 +113,14 @@ const CreatePostPage = () => {
                     </div>
 
                     {previews.length > 0 && (
-                        <div className={styles.imagePreviewGrid} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px', marginBottom: '20px' }}>
+                        <div className={styles.imagePreviewGrid}>
                             {previews.map((url, index) => (
-                                <div key={index} style={{ position: 'relative', aspectRatio: '1/1' }}>
-                                    <img src={url} alt={`Preview ${index}`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                                <div key={index} className={styles.imagePreviewItem}>
+                                    <img src={url} alt={`Preview ${index}`} className={styles.previewImage} />
                                     <button 
                                         type="button" 
                                         onClick={() => removeImage(index)}
-                                        style={{ 
-                                            position: 'absolute', top: -5, right: -5, 
-                                            background: 'red', color: 'white', 
-                                            border: 'none', borderRadius: '50%', 
-                                            width: '20px', height: '20px', 
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            cursor: 'pointer'
-                                        }}
+                                        className={styles.removeImageBtn}
                                     >
                                         <X size={12} />
                                     </button>
@@ -179,7 +176,12 @@ const CreatePostPage = () => {
                             取消
                         </Button>
                         <Button type="submit" variant="social" disabled={loading}>
-                            {loading ? '发布中...' : '发布'}
+                            {loading ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <LoadingSpinner size="small" />
+                                    <span>发布中...</span>
+                                </div>
+                            ) : '发布'}
                         </Button>
                     </div>
                 </form>

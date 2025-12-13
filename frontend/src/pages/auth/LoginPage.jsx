@@ -4,6 +4,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import { toast } from 'react-hot-toast';
 import styles from './Auth.module.css';
 
 const LoginPage = () => {
@@ -20,11 +22,13 @@ const LoginPage = () => {
         setLoading(true);
         try {
             await login(email, password);
+            toast.success("登录成功");
             navigate('/social');
         } catch (err) {
             console.error('Login failed', err);
             const errMsg = err.response?.data?.error || err.message || '登录失败，请检查您的凭证。';
             setError(errMsg);
+            toast.error(errMsg);
         } finally {
             setLoading(false);
         }
@@ -53,7 +57,12 @@ const LoginPage = () => {
                     {error && <div className={styles.error}>{error}</div>}
 
                     <Button type="submit" variant="primary" className={styles.submitBtn} disabled={loading}>
-                        {loading ? '登录中...' : '登录'}
+                        {loading ? (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <LoadingSpinner size="small" />
+                                <span>登录中...</span>
+                            </div>
+                        ) : '登录'}
                     </Button>
 
                     <div className={styles.footer}>

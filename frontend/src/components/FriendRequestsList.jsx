@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getFriendRequests, acceptFriendRequest, rejectFriendRequest } from '../api/social';
 import Button from './Button';
 import { Check, X } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const FriendRequestsList = () => {
     const [requests, setRequests] = useState([]);
@@ -23,13 +24,9 @@ const FriendRequestsList = () => {
         try {
             await acceptFriendRequest(id);
             setRequests(prev => prev.filter(r => r.id !== id));
-            // Trigger refresh of conversations? (Since accepting creates/enables chat)
-            // But this component is isolated. 
-            // Ideally trigger parent refresh or reload window.
-            // window.location.reload(); // Simple but rough
-            // Better: Dispatch event or context.
+            toast.success("已接受");
         } catch (err) {
-            alert(err.message);
+            toast.error(err.message);
         }
     };
 
@@ -37,8 +34,9 @@ const FriendRequestsList = () => {
         try {
             await rejectFriendRequest(id);
             setRequests(prev => prev.filter(r => r.id !== id));
+            toast.success("已拒绝");
         } catch (err) {
-            alert(err.message);
+            toast.error(err.message);
         }
     };
 
