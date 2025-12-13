@@ -79,8 +79,9 @@ class PostContent:
 class MessageContent:
     """消息内容值对象"""
     text: str
-    message_type: str = "text"  # text, image, location, trip_share
-    attachment_url: Optional[str] = None
+    message_type: str = "text"  # text, image, share_post
+    media_url: Optional[str] = None
+    reference_id: Optional[str] = None
     
     TEXT_MAX_LENGTH = 2000
     
@@ -89,8 +90,10 @@ class MessageContent:
             raise ValueError("Text message cannot be empty")
         if self.text and len(self.text) > self.TEXT_MAX_LENGTH:
             raise ValueError(f"Message must be at most {self.TEXT_MAX_LENGTH} characters")
-        if self.message_type in ["image", "location", "trip_share"] and not self.attachment_url:
-            raise ValueError(f"{self.message_type} message requires attachment_url")
+        if self.message_type == "image" and not self.media_url:
+            raise ValueError("Image message requires media_url")
+        if self.message_type == "share_post" and not self.reference_id:
+            raise ValueError("Share post message requires reference_id")
     
     @classmethod
     def text_message(cls, text: str) -> 'MessageContent':
@@ -100,17 +103,20 @@ class MessageContent:
     @classmethod
     def image_message(cls, image_url: str, caption: str = "") -> 'MessageContent':
         """创建图片消息"""
-        return cls(text=caption, message_type="image", attachment_url=image_url)
-    
+        return cls(text=caption, message_type="image", media_url=image_url)
+
     @classmethod
-    def location_message(cls, location_url: str, description: str = "") -> 'MessageContent':
-        """创建位置消息"""
-        return cls(text=description, message_type="location", attachment_url=location_url)
-    
-    @classmethod
-    def trip_share_message(cls, trip_id: str, message: str = "") -> 'MessageContent':
-        """创建旅行分享消息"""
-        return cls(text=message, message_type="trip_share", attachment_url=trip_id)
+    def share_post_message(cls, post_id: str, comment: str = "") -> 'MessageContent':
+        """创建帖子分享消息"""
+        return cls(text=comment, message_type="share_post", reference_id=post_id)
+
+
+class MessageType(Enum):
+    """消息类型枚举"""
+    TEXT = "text"
+    IMAGE = "image"
+    SHARE_POST = "share_post"
+
 
 
 class PostVisibility(Enum):

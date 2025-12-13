@@ -128,6 +128,8 @@ class MessageSentEvent(DomainEvent):
     recipient_ids: Tuple[str, ...] = ()  # 接收者ID列表
     message_type: str = "text"
     content: str = ""
+    media_url: Optional[str] = None
+    reference_id: Optional[str] = None
 
 
 @dataclass(frozen=True)

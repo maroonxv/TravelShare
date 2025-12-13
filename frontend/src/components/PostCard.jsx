@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, MapPin, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, MapPin, Trash2, Share2 } from 'lucide-react';
 import Card from './Card';
 import styles from './PostCard.module.css';
 import { likePost, deletePost } from '../api/social';
 import { useAuth } from '../context/AuthContext';
+import ShareModal from '../pages/social/ShareModal';
 
 const PostCard = ({ post, onDelete }) => {
     const { user } = useAuth();
@@ -13,6 +14,7 @@ const PostCard = ({ post, onDelete }) => {
     const [isLiked, setIsLiked] = useState(post.is_liked || false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
 
     const handleLike = async () => {
         try {
@@ -41,7 +43,7 @@ const PostCard = ({ post, onDelete }) => {
         }
     };
 
-    const handleImageClick = (e, index) => {
+    const handleImageClick = (e) => {
         e.preventDefault();
         // MVP: 点击图片跳转到详情页
         navigate(`/social/post/${post.id}`);
@@ -173,7 +175,17 @@ const PostCard = ({ post, onDelete }) => {
                     <MessageCircle size={18} />
                     <span>{post.comment_count || '评论'}</span>
                 </Link>
+                <button className={styles.actionBtn} onClick={() => setShowShareModal(true)}>
+                    <Share2 size={18} />
+                    <span>分享</span>
+                </button>
             </div>
+            
+            <ShareModal 
+                isOpen={showShareModal} 
+                onClose={() => setShowShareModal(false)} 
+                post={post} 
+            />
         </Card>
     );
 };

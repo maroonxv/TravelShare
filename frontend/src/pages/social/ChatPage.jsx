@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import EmojiPicker from 'emoji-picker-react';
 import { 
     getConversations, 
     getMessages, 
@@ -12,7 +13,7 @@ import {
     createConversation
 } from '../../api/social';
 import { useAuth } from '../../context/AuthContext';
-import { Send, User, Check, X, MessageSquare, ArrowLeft, Paperclip, Smile, Plus, Users, UserPlus } from 'lucide-react';
+import { Send, User, Check, X, MessageSquare, ArrowLeft, Paperclip, Smile, Plus, Users, UserPlus, Image as ImageIcon } from 'lucide-react';
 import AddFriendModal from './AddFriendModal';
 import CreateGroupModal from './CreateGroupModal';
 import styles from './ChatPage.module.css';
@@ -29,10 +30,15 @@ const ChatPage = () => {
     const [showAddFriend, setShowAddFriend] = useState(false);
     const [showCreateGroup, setShowCreateGroup] = useState(false);
     const [showDropdown, setShowDropdown] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [selectedFile, setSelectedFile] = useState(null);
+    
     const messagesEndRef = useRef(null);
     const dropdownRef = useRef(null);
     const socketRef = useRef(null);
     const activeConvIdRef = useRef(activeConvId);
+    const fileInputRef = useRef(null);
+    const emojiPickerRef = useRef(null);
 
     useEffect(() => {
         activeConvIdRef.current = activeConvId;
@@ -97,21 +103,26 @@ const ChatPage = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    const handleClickOutside = (event) => {
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+            setShowDropdown(false);
+        }
+        if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target) && !event.target.closest(`.${styles.attachBtn}`)) {
+            setShowEmojiPicker(false);
+        }
+    };
+
     useEffect(() => {
         if (activeConvId) {
             loadMessages(activeConvId);
+            setNewMessage('');
+            setSelectedFile(null);
         }
     }, [activeConvId]);
 
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
-
-    const handleClickOutside = (event) => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-            setShowDropdown(false);
-        }
-    };
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -149,18 +160,59 @@ const ChatPage = () => {
         }
     };
 
+    const handleFileSelect = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('不支持的文件类型，请选择图片');
+            return;
+        }
+
+        setSelectedFile(file);
+        // Reset value so same file can be selected again if cleared
+        e.target.value = '';
+    };
+
+    const removeFile = () => {
+        setSelectedFile(null);
+    };
+
+    const handleEmojiClick = (emojiObject) => {
+        setNewMessage(prev => prev + emojiObject.emoji);
+    };
+
     const handleSend = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim() || !activeConvId) return;
+        if ((!newMessage.trim() && !selectedFile) || !activeConvId) return;
 
         try {
-            await sendMessage(activeConvId, newMessage);
+            let payload;
+            if (selectedFile) {
+                const formData = new FormData();
+                formData.append('content', newMessage); // Caption
+                formData.append('type', 'image');
+                formData.append('media_file', selectedFile);
+                payload = formData;
+            } else {
+                payload = newMessage; // Simple text
+            }
+
+            await sendMessage(activeConvId, payload);
             setNewMessage('');
-            loadMessages(activeConvId); 
-            const convs = await getConversations();
-            setConversations(convs);
+            setSelectedFile(null);
+            setShowEmojiPicker(false);
+            
+            // Optimistic update or wait for socket? 
+            // Socket usually handles it, but let's reload to be safe or rely on socket.
+            // Socket update is already handled in useEffect.
+            
+            // loadMessages(activeConvId); 
+            // const convs = await getConversations();
+            // setConversations(convs);
         } catch (error) {
             console.error("Failed to send message", error);
+            alert("发送失败");
         }
     };
     
@@ -391,7 +443,24 @@ const ChatPage = () => {
                                         data-chain={!isChain ? "first" : ""}
                                     >
                                         <div className={styles.messageBubble}>
-                                            {msg.content}
+                                            {msg.type === 'image' ? (
+                                                <div className={styles.imageMessage}>
+                                                    <img src={msg.media_url} alt="Shared" className={styles.msgImage} />
+                                                    {msg.content && <p className={styles.imageCaption}>{msg.content}</p>}
+                                                </div>
+                                            ) : msg.type === 'share_post' ? (
+                                                <div className={styles.shareMessage}>
+                                                    <p className={styles.shareText}>{msg.content}</p>
+                                                    <Link to={`/social/post/${msg.reference_id}`} className={styles.shareLink}>
+                                                        <div className={styles.shareCard}>
+                                                            <span>查看分享的帖子</span>
+                                                            <ArrowLeft size={16} style={{transform: 'rotate(180deg)'}} />
+                                                        </div>
+                                                    </Link>
+                                                </div>
+                                            ) : (
+                                                msg.content
+                                            )}
                                         </div>
                                     </div>
                                 );
@@ -400,9 +469,28 @@ const ChatPage = () => {
                         </div>
 
                         <div className={styles.inputContainer}>
+                            {selectedFile && (
+                                <div className={styles.filePreview}>
+                                    <div className={styles.previewItem}>
+                                        <ImageIcon size={16} />
+                                        <span className={styles.fileName}>{selectedFile.name}</span>
+                                        <button type="button" onClick={removeFile} className={styles.removeFileBtn}>
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                            
                             <form onSubmit={handleSend} className={styles.inputWrapper}>
-                                <button type="button" className={styles.attachBtn}>
-                                    <Paperclip size={20} />
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef}
+                                    style={{display: 'none'}} 
+                                    accept="image/*"
+                                    onChange={handleFileSelect}
+                                />
+                                <button type="button" className={styles.attachBtn} onClick={() => fileInputRef.current?.click()}>
+                                    <ImageIcon size={20} />
                                 </button>
                                 <textarea
                                     value={newMessage}
@@ -412,10 +500,21 @@ const ChatPage = () => {
                                     className={styles.inputField}
                                     rows={1}
                                 />
-                                <button type="button" className={styles.attachBtn}>
-                                    <Smile size={20} />
-                                </button>
-                                <button type="submit" className={styles.sendBtn} disabled={!newMessage.trim()}>
+                                <div className={styles.emojiWrapper} ref={emojiPickerRef}>
+                                    <button 
+                                        type="button" 
+                                        className={styles.attachBtn} 
+                                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                    >
+                                        <Smile size={20} />
+                                    </button>
+                                    {showEmojiPicker && (
+                                        <div className={styles.emojiPickerContainer}>
+                                            <EmojiPicker onEmojiClick={handleEmojiClick} width={300} height={400} />
+                                        </div>
+                                    )}
+                                </div>
+                                <button type="submit" className={styles.sendBtn} disabled={!newMessage.trim() && !selectedFile}>
                                     <Send size={20} />
                                 </button>
                             </form>

@@ -427,3 +427,101 @@
 .dropdownItem:hover {
     background: rgba(255, 255, 255, 0.05);
 }
+
+/* Image Message */
+.imageMessage {
+    max-width: 300px;
+}
+
+.msgImage {
+    width: 100%;
+    border-radius: 8px;
+    display: block;
+}
+
+.imageCaption {
+    margin: 8px 0 0 0;
+    font-size: 0.95rem;
+}
+
+/* Share Post Message */
+.shareMessage {
+    min-width: 250px;
+}
+
+.shareText {
+    margin: 0 0 8px 0;
+}
+
+.shareLink {
+    text-decoration: none;
+    color: inherit;
+}
+
+.shareCard {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 12px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: background 0.2s;
+}
+
+.shareCard:hover {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* File Preview */
+.filePreview {
+    margin-bottom: 8px;
+    display: flex;
+}
+
+.previewItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
+.fileName {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.removeFileBtn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.removeFileBtn:hover {
+    color: #ef4444;
+}
+
+/* Emoji Picker */
+.emojiWrapper {
+    position: relative;
+}
+
+.emojiPickerContainer {
+    position: absolute;
+    bottom: 50px;
+    right: 0;
+    z-index: 100;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+}

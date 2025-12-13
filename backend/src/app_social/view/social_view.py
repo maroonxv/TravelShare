@@ -249,13 +249,31 @@ def send_message(conv_id):
     """发送消息"""
     try:
         user_id = _get_current_user_id()
-        data = request.get_json()
+        
+        content = ''
+        message_type = 'text'
+        reference_id = None
+        media_file = None
+        
+        if request.content_type and 'multipart/form-data' in request.content_type:
+             content = request.form.get('content', '')
+             message_type = request.form.get('type', 'text')
+             reference_id = request.form.get('reference_id')
+             if 'media_file' in request.files:
+                 media_file = request.files['media_file']
+        else:
+            data = request.get_json()
+            content = data.get('content', '')
+            message_type = data.get('type', 'text')
+            reference_id = data.get('reference_id')
         
         result = social_service.send_message(
             conversation_id=conv_id,
             sender_id=user_id,
-            content=data.get('content', ''),
-            message_type=data.get('type', 'text')
+            content=content,
+            message_type=message_type,
+            media_file=media_file,
+            reference_id=reference_id
         )
         return jsonify(result), 201
     except Exception as e:

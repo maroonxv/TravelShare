@@ -226,7 +226,9 @@ class Conversation:
             sender_id=sender_id,
             recipient_ids=tuple(recipient_ids),
             message_type=content.message_type,
-            content=content.text
+            content=content.text,
+            media_url=content.media_url,
+            reference_id=content.reference_id
         ))
         
         return message

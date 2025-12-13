@@ -27,7 +27,8 @@ class MessagePO(Base):
     # 消息内容
     content_text = Column(Text, nullable=False)
     message_type = Column(String(20), nullable=False, default='text')
-    attachment_url = Column(String(500), nullable=True)
+    media_url = Column(String(500), nullable=True)
+    reference_id = Column(String(36), nullable=True)
     
     # 状态
     sent_at = Column(DateTime, nullable=False, default=datetime.utcnow)
@@ -59,7 +60,8 @@ class MessagePO(Base):
         content = MessageContent(
             text=self.content_text,
             message_type=self.message_type,
-            attachment_url=self.attachment_url
+            media_url=self.media_url,
+            reference_id=self.reference_id
         )
         
         message = Message(
@@ -90,7 +92,8 @@ class MessagePO(Base):
             sender_id=message.sender_id,
             content_text=message.content.text,
             message_type=message.content.message_type,
-            attachment_url=message.content.attachment_url,
+            media_url=message.content.media_url,
+            reference_id=message.content.reference_id,
             sent_at=message.sent_at,
             is_deleted=message.is_deleted
         )
@@ -105,6 +108,7 @@ class MessagePO(Base):
         """
         self.content_text = message.content.text
         self.message_type = message.content.message_type
-        self.attachment_url = message.content.attachment_url
+        self.media_url = message.content.media_url
+        self.reference_id = message.content.reference_id
         self.is_deleted = message.is_deleted
         self.read_by = message.read_by

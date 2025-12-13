@@ -40,7 +40,7 @@ export const deletePost = async (id) => {
     return response.data;
 };
 
-export const getComments = async (postId) => {
+export const getComments = async () => {
     // Assuming comments are part of post detail or fetched separately? 
     // The prompt says "GET /posts/:id" returns post details.
     // And "POST /posts/:id/comments" to add.
@@ -69,8 +69,18 @@ export const getMessages = async (conversationId) => {
     return response.data;
 };
 
-export const sendMessage = async (conversationId, content) => {
-    const response = await client.post(`/social/conversations/${conversationId}/messages`, { content });
+export const sendMessage = async (conversationId, payload) => {
+    // payload can be a simple string (text message), an object (json), or FormData
+    let data = payload;
+    let config = {};
+
+    if (typeof payload === 'string') {
+        data = { content: payload };
+    } else if (payload instanceof FormData) {
+        config = { headers: { 'Content-Type': 'multipart/form-data' } };
+    }
+    
+    const response = await client.post(`/social/conversations/${conversationId}/messages`, data, config);
     return response.data;
 };
 

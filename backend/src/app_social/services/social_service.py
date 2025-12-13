@@ -632,7 +632,9 @@ class SocialService:
         conversation_id: str,
         sender_id: str,
         content: str,
-        message_type: str = "text"
+        message_type: str = "text",
+        media_file: Any = None,
+        reference_id: str = None
     ) -> Dict[str, Any]:
         """发送消息"""
         session = SessionLocal()
@@ -645,7 +647,29 @@ class SocialService:
             if not conv:
                 raise ValueError("Conversation not found")
             
-            msg_content = MessageContent(text=content, message_type=message_type)
+            # 根据类型构建消息内容
+            if message_type == "image":
+                if not media_file:
+                    raise ValueError("Image message requires media_file")
+                media_url = self._storage_service.save(media_file, sub_folder="chat_images")
+                msg_content = MessageContent.image_message(media_url, content)
+            
+            elif message_type == "share_post":
+                if not reference_id:
+                    raise ValueError("Share post message requires reference_id")
+                
+                # 校验帖子是否存在
+                post_dao = SqlAlchemyPostDao(session)
+                post_repo = PostRepositoryImpl(post_dao)
+                if not post_repo.find_by_id(PostId(reference_id)):
+                    raise ValueError("Post not found")
+                
+                msg_content = MessageContent.share_post_message(reference_id, content)
+            
+            else:
+                # 默认为文本
+                msg_content = MessageContent.text_message(content)
+
             message = conv.send_message(sender_id, msg_content)
             
             conv_repo.save(conv)
@@ -654,7 +678,9 @@ class SocialService:
             
             return {
                 "message_id": message.message_id,
-                "sent_at": message.sent_at.isoformat()
+                "sent_at": message.sent_at.isoformat(),
+                "media_url": message.content.media_url,
+                "reference_id": message.content.reference_id
             }
         except Exception as e:
             session.rollback()
@@ -766,6 +792,8 @@ class SocialService:
                 "sender_id": m.sender_id,
                 "content": m.content.text,
                 "type": m.content.message_type,
+                "media_url": m.content.media_url,
+                "reference_id": m.content.reference_id,
                 "sent_at": m.sent_at.isoformat(),
                 "is_read_by_me": m.is_read_by(user_id) # 应该是 True
             } for m in messages]
