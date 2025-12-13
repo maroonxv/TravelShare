@@ -130,7 +130,7 @@ const ProfilePage = () => {
 
             {posts.length > 0 && (
                 <>
-                    <h2 className={styles.sectionTitle}>我的动态</h2>
+                    <h2 className={styles.sectionTitle}>{isOwnProfile ? '我的动态' : '动态'}</h2>
                     <div className={styles.itemsGrid}>
                         {posts.map(post => (
                             <PostCard key={post.id} post={post} />
@@ -141,7 +141,7 @@ const ProfilePage = () => {
 
             {trips.length > 0 && (
                 <>
-                    <h2 className={styles.sectionTitle}>我的旅行</h2>
+                    <h2 className={styles.sectionTitle}>{isOwnProfile ? '我的旅行' : '旅行'}</h2>
                     <div className={styles.itemsGrid}>
                         {trips.map(trip => (
                             <TripCard key={trip.id} trip={trip} />

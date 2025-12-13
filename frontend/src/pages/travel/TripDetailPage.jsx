@@ -64,10 +64,10 @@ const TripDetailPage = () => {
     const isCurrentUserAdmin = user?.id === trip.creator_id || currentUserMember?.role === 'admin' || currentUserMember?.role === 'owner';
 
     const STATUS_OPTIONS = [
-        { value: 'planning', label: 'PLANNING' },
-        { value: 'in_progress', label: 'IN_PROGRESS' },
-        { value: 'completed', label: 'COMPLETED' },
-        { value: 'cancelled', label: 'CANCELLED' }
+        { value: 'planning', label: '计划中' },
+        { value: 'in_progress', label: '进行中' },
+        { value: 'completed', label: '已完成' },
+        { value: 'cancelled', label: '已取消' }
     ];
 
     const TRANSIT_MODE_MAP = {

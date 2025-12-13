@@ -42,11 +42,11 @@ const CreateGroupModal = ({ onClose, onSuccess }) => {
 
     const handleCreate = async () => {
         if (!title.trim()) {
-            alert("Please enter a group name");
+            alert("请输入群组名称");
             return;
         }
         if (selectedFriends.size === 0) {
-            alert("Please select at least one friend");
+            alert("请至少选择一位好友");
             return;
         }
 
@@ -57,7 +57,7 @@ const CreateGroupModal = ({ onClose, onSuccess }) => {
             onClose();
         } catch (error) {
             console.error("Failed to create group", error);
-            alert("Failed to create group: " + (error.response?.data?.error || error.message));
+            alert("创建群组失败: " + (error.response?.data?.error || error.message));
         } finally {
             setSubmitting(false);
         }
@@ -67,15 +67,15 @@ const CreateGroupModal = ({ onClose, onSuccess }) => {
         <div className={styles.overlay} onClick={onClose}>
             <div className={styles.modal} onClick={e => e.stopPropagation()}>
                 <div className={styles.header}>
-                    <h3>Create Group Chat</h3>
+                    <h3>创建群聊</h3>
                     <button className={styles.closeBtn} onClick={onClose}><X size={20}/></button>
                 </div>
                 
                 <div className={styles.body}>
                     <div className={styles.field}>
-                        <label>Group Name</label>
+                        <label>群组名称</label>
                         <Input 
-                            placeholder="Enter group name..." 
+                            placeholder="输入群组名称..." 
                             value={title}
                             onChange={e => setTitle(e.target.value)}
                             autoFocus
@@ -83,11 +83,11 @@ const CreateGroupModal = ({ onClose, onSuccess }) => {
                     </div>
 
                     <div className={styles.field}>
-                        <label>Select Participants ({selectedFriends.size})</label>
+                        <label>选择成员 ({selectedFriends.size})</label>
                         <div className={styles.friendList}>
-                            {loading && <div className={styles.loading}>Loading friends...</div>}
+                            {loading && <div className={styles.loading}>加载好友中...</div>}
                             {!loading && friends.length === 0 && (
-                                <div className={styles.empty}>No friends found</div>
+                                <div className={styles.empty}>暂无好友</div>
                             )}
                             {friends.map(friend => (
                                 <div 
@@ -103,9 +103,9 @@ const CreateGroupModal = ({ onClose, onSuccess }) => {
                                         )}
                                         <span className={styles.username}>{friend.name}</span>
                                     </div>
-                                    <div className={styles.checkbox}>
-                                        {selectedFriends.has(friend.id) && <Check size={16} />}
-                                    </div>
+                                    {selectedFriends.has(friend.id) && (
+                                        <Check size={18} className={styles.checkIcon} />
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -113,12 +113,13 @@ const CreateGroupModal = ({ onClose, onSuccess }) => {
                 </div>
 
                 <div className={styles.footer}>
-                    <Button variant="secondary" onClick={onClose}>Cancel</Button>
+                    <Button variant="secondary" onClick={onClose}>取消</Button>
                     <Button 
+                        variant="primary" 
                         onClick={handleCreate} 
                         disabled={submitting || !title.trim() || selectedFriends.size === 0}
                     >
-                        {submitting ? 'Creating...' : 'Create Group'}
+                        {submitting ? '创建中...' : '创建'}
                     </Button>
                 </div>
             </div>

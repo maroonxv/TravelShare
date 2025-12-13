@@ -167,7 +167,7 @@ const CreatePostPage = () => {
 
                         <Input
                             label="标签 (逗号分隔)"
-                            placeholder="travel, fun, japan"
+                            placeholder="旅行, 美食, 摄影"
                             value={tags}
                             onChange={(e) => setTags(e.target.value)}
                             className={styles.tagsInput}

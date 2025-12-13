@@ -23,7 +23,7 @@ const LoginPage = () => {
             navigate('/social');
         } catch (err) {
             console.error('Login failed', err);
-            const errMsg = err.response?.data?.error || err.message || 'Login failed. Please check your credentials.';
+            const errMsg = err.response?.data?.error || err.message || '登录失败，请检查您的凭证。';
             setError(errMsg);
         } finally {
             setLoading(false);
@@ -32,20 +32,20 @@ const LoginPage = () => {
 
     return (
         <div className={styles.container}>
-            <Card className={styles.authCard} title="Welcome Back">
+            <Card className={styles.authCard} title="欢迎回来">
                 <form onSubmit={handleSubmit} className={styles.form}>
                     <Input
-                        label="Email"
+                        label="邮箱"
                         type="email"
-                        placeholder="Enter your email"
+                        placeholder="请输入邮箱"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
                     />
                     <Input
-                        label="Password"
+                        label="密码"
                         type="password"
-                        placeholder="Enter your password"
+                        placeholder="请输入密码"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -53,11 +53,11 @@ const LoginPage = () => {
                     {error && <div className={styles.error}>{error}</div>}
 
                     <Button type="submit" variant="primary" className={styles.submitBtn} disabled={loading}>
-                        {loading ? 'Logging in...' : 'Login'}
+                        {loading ? '登录中...' : '登录'}
                     </Button>
 
                     <div className={styles.footer}>
-                        Don't have an account? <Link to="/auth/register" className={styles.link}>Register here</Link>
+                        还没有账号？ <Link to="/auth/register" className={styles.link}>立即注册</Link>
                     </div>
                 </form>
             </Card>

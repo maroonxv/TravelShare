@@ -26,7 +26,7 @@ const RegisterPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (formData.password !== formData.confirmPassword) {
-            return setError("Passwords do not match");
+            return setError("两次输入的密码不一致");
         }
 
         setError('');
@@ -43,7 +43,7 @@ const RegisterPage = () => {
             navigate('/social');
         } catch (err) {
             console.error('Registration failed', err);
-            const errMsg = err.response?.data?.error || err.message || 'Registration failed. Please try again.';
+            const errMsg = err.response?.data?.error || err.message || '注册失败，请重试。';
             setError(errMsg);
         } finally {
             setLoading(false);
@@ -52,40 +52,40 @@ const RegisterPage = () => {
 
     return (
         <div className={styles.container}>
-            <Card className={styles.authCard} title="Create Account">
+            <Card className={styles.authCard} title="创建账号">
                 <form onSubmit={handleSubmit} className={styles.form}>
                     <Input
-                        label="Username"
+                        label="用户名"
                         name="username"
                         type="text"
-                        placeholder="Choose a username"
+                        placeholder="请设置用户名"
                         value={formData.username}
                         onChange={handleChange}
                         required
                     />
                     <Input
-                        label="Email"
+                        label="邮箱"
                         name="email"
                         type="email"
-                        placeholder="Enter your email"
+                        placeholder="请输入邮箱"
                         value={formData.email}
                         onChange={handleChange}
                         required
                     />
                     <Input
-                        label="Password"
+                        label="密码"
                         name="password"
                         type="password"
-                        placeholder="Create a password"
+                        placeholder="请设置密码"
                         value={formData.password}
                         onChange={handleChange}
                         required
                     />
                     <Input
-                        label="Confirm Password"
+                        label="确认密码"
                         name="confirmPassword"
                         type="password"
-                        placeholder="Confirm your password"
+                        placeholder="请再次输入密码"
                         value={formData.confirmPassword}
                         onChange={handleChange}
                         required
@@ -94,11 +94,11 @@ const RegisterPage = () => {
                     {error && <div className={styles.error}>{error}</div>}
 
                     <Button type="submit" variant="primary" className={styles.submitBtn} disabled={loading}>
-                        {loading ? 'Creating Account...' : 'Register'}
+                        {loading ? '正在创建账号...' : '注册'}
                     </Button>
 
                     <div className={styles.footer}>
-                        Already have an account? <Link to="/auth/login" className={styles.link}>Login here</Link>
+                        已有账号？ <Link to="/auth/login" className={styles.link}>立即登录</Link>
                     </div>
                 </form>
             </Card>

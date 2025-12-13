@@ -44,7 +44,7 @@ const FriendActionButton = ({ targetUserId, initialStatus }) => {
             setIsRequester(true);
             setFriendshipId(res.friendship_id);
         } catch (err) {
-            alert("Failed to send request: " + (err.response?.data?.error || err.message));
+            alert("发送请求失败: " + (err.response?.data?.error || err.message));
         } finally {
             setLoading(false);
         }
@@ -57,7 +57,7 @@ const FriendActionButton = ({ targetUserId, initialStatus }) => {
             setStatus('ACCEPTED');
             // Optionally redirect to chat or just show "Message" button
         } catch (err) {
-            alert("Failed to accept: " + err.message);
+            alert("接受请求失败: " + err.message);
         } finally {
             setLoading(false);
         }
@@ -71,7 +71,7 @@ const FriendActionButton = ({ targetUserId, initialStatus }) => {
             // Backend implementation: REJECTED state persists.
             // So we show "Rejected" or "Request Rejected".
         } catch (err) {
-            alert("Failed to reject: " + err.message);
+            alert("拒绝请求失败: " + err.message);
         } finally {
             setLoading(false);
         }
@@ -107,7 +107,7 @@ const FriendActionButton = ({ targetUserId, initialStatus }) => {
         }
     };
 
-    if (loading) return <Button disabled>Processing...</Button>;
+    if (loading) return <Button disabled>处理中...</Button>;
 
     if (status === 'ACCEPTED') {
         return (

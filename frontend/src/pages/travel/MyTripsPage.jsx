@@ -71,8 +71,7 @@ const MyTripsPage = () => {
 
     return (
         <div>
-            <div className={styles.header} style={{ borderBottom: 'none', marginBottom: '1rem', paddingBottom: 0 }}>
-                <div /> {/* Spacer or empty title */}
+            <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
                 <Button variant="travel" onClick={() => setShowModal(true)}>
                     <Plus size={20} style={{ marginRight: '0.5rem' }} />
                     新建旅行
@@ -140,9 +139,9 @@ const MyTripsPage = () => {
                                     onChange={e => setNewTrip({ ...newTrip, visibility: e.target.value })}
                                     style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                                 >
-                                    <option value="private">私有 (Private)</option>
-                                    <option value="public">公开 (Public)</option>
-                                    <option value="shared">共享 (Shared)</option>
+                                    <option value="private">私有</option>
+                                    <option value="public">公开</option>
+                                    <option value="shared">共享</option>
                                 </select>
                             </div>
 

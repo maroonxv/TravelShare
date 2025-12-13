@@ -268,7 +268,7 @@ const ChatPage = () => {
     };
 
     const getConvName = (conv) => {
-        return conv.name || conv.other_user_name || "Chat";
+        return conv.name || conv.other_user_name || "聊天";
     };
 
     const getConvAvatar = (conv) => {
@@ -315,7 +315,7 @@ const ChatPage = () => {
             {/* Left Sidebar */}
             <div className={styles.sidebar}>
                 <div className={styles.sidebarHeader}>
-                    <span className={styles.sidebarTitle}>Messages</span>
+                    <span className={styles.sidebarTitle}>消息</span>
                     <div className={styles.headerActions} ref={dropdownRef}>
                         <button className={styles.iconBtn} onClick={() => setShowDropdown(!showDropdown)}>
                             <Plus size={20} />
@@ -324,11 +324,11 @@ const ChatPage = () => {
                             <div className={styles.dropdownMenu}>
                                 <button className={styles.dropdownItem} onClick={() => { setShowAddFriend(true); setShowDropdown(false); }}>
                                     <UserPlus size={16} />
-                                    <span>Add Friend</span>
+                                    <span>添加好友</span>
                                 </button>
                                 <button className={styles.dropdownItem} onClick={() => { setShowCreateGroup(true); setShowDropdown(false); }}>
                                     <Users size={16} />
-                                    <span>Create Group</span>
+                                    <span>发起群聊</span>
                                 </button>
                             </div>
                         )}
@@ -339,7 +339,7 @@ const ChatPage = () => {
                     {/* Friend Requests */}
                     {requests.length > 0 && (
                         <>
-                            <div className={styles.sectionTitle}>Requests</div>
+                            <div className={styles.sectionTitle}>好友请求</div>
                             {requests.map(req => (
                                 <div key={req.id} className={styles.listItem}>
                                     <div className={styles.avatar}>
@@ -347,12 +347,12 @@ const ChatPage = () => {
                                             <img src={req.other_user.avatar} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
                                         ) : <User size={20} />}
                                     </div>
-                                    <span className={styles.itemName}>{req.other_user?.name || "Unknown"}</span>
+                                    <span className={styles.itemName}>{req.other_user?.name || "未知用户"}</span>
                                     <div className={styles.itemMeta} style={{display: 'flex', gap: 8}}>
                                         <button onClick={(e) => { e.stopPropagation(); handleAcceptRequest(req.id); }} style={{color: '#4ade80'}}><Check size={18}/></button>
                                         <button onClick={(e) => { e.stopPropagation(); handleRejectRequest(req.id); }} style={{color: '#f87171'}}><X size={18}/></button>
                                     </div>
-                                    <span className={styles.itemPreview}>Friend Request</span>
+                                    <span className={styles.itemPreview}>好友请求</span>
                                 </div>
                             ))}
                         </>
@@ -361,7 +361,7 @@ const ChatPage = () => {
                     {/* Friends List */}
                     {friends.length > 0 && (
                         <>
-                            <div className={styles.sectionTitle}>Friends</div>
+                            <div className={styles.sectionTitle}>好友</div>
                             {friends.map(friend => (
                                 <div key={friend.id} className={styles.listItem} onClick={() => handleStartChat(friend.id)}>
                                     <div className={styles.avatar}>
@@ -370,17 +370,17 @@ const ChatPage = () => {
                                         ) : <User size={20} />}
                                     </div>
                                     <span className={styles.itemName}>{friend.name}</span>
-                                    <span className={styles.itemPreview}>Click to chat</span>
+                                    <span className={styles.itemPreview}>点击发起聊天</span>
                                 </div>
                             ))}
                         </>
                     )}
 
                     {/* Conversations */}
-                    <div className={styles.sectionTitle}>Chats</div>
-                    {loading && <div style={{padding: 20, textAlign: 'center', color: '#666'}}>Loading...</div>}
+                    <div className={styles.sectionTitle}>聊天</div>
+                    {loading && <div style={{padding: 20, textAlign: 'center', color: '#666'}}>加载中...</div>}
                     {!loading && conversations.length === 0 && (
-                        <div style={{padding: 20, textAlign: 'center', color: '#666'}}>No active chats</div>
+                        <div style={{padding: 20, textAlign: 'center', color: '#666'}}>暂无聊天</div>
                     )}
                     {conversations.map(conv => (
                         <div
@@ -400,7 +400,7 @@ const ChatPage = () => {
                                 {conv.last_message ? formatTime(conv.last_message.created_at) : ''}
                             </span>
                             <span className={styles.itemPreview}>
-                                {conv.last_message?.content || 'No messages yet'}
+                                {conv.last_message?.content || '暂无消息'}
                             </span>
                         </div>
                     ))}
@@ -424,9 +424,9 @@ const ChatPage = () => {
                             </Link>
                             <Link to={otherUserId ? `/users/${otherUserId}` : '#'} className={styles.headerInfo} style={{textDecoration: 'none'}}>
                                 <span className={styles.headerName}>
-                                    {activeConv ? getConvName(activeConv) : 'Chat'}
+                                    {activeConv ? getConvName(activeConv) : '聊天'}
                                 </span>
-                                <span className={styles.headerStatus}>online</span>
+                                <span className={styles.headerStatus}>在线</span>
                             </Link>
                         </div>
 
@@ -525,7 +525,7 @@ const ChatPage = () => {
                         <div className={styles.noChatIcon}>
                             <MessageSquare size={32} />
                         </div>
-                        <p>Select a chat to start messaging</p>
+                        <p>选择一个聊天开始发送消息</p>
                     </div>
                 )}
             </div>

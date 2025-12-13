@@ -39,7 +39,7 @@ const AddFriendModal = ({ onClose }) => {
             await sendFriendRequest(userId);
             setSentRequests(prev => new Set(prev).add(userId));
         } catch (error) {
-            alert("Failed to send request: " + (error.response?.data?.error || error.message));
+            alert("发送请求失败: " + (error.response?.data?.error || error.message));
         }
     };
 
@@ -47,14 +47,14 @@ const AddFriendModal = ({ onClose }) => {
         <div className={styles.overlay} onClick={onClose}>
             <div className={styles.modal} onClick={e => e.stopPropagation()}>
                 <div className={styles.header}>
-                    <h3>Add Friend</h3>
+                    <h3>添加好友</h3>
                     <button className={styles.closeBtn} onClick={onClose}><X size={20}/></button>
                 </div>
                 
                 <div className={styles.searchBar}>
                     <Search size={18} className={styles.searchIcon} />
                     <Input 
-                        placeholder="Search by username..." 
+                        placeholder="搜索用户名..." 
                         value={query}
                         onChange={e => setQuery(e.target.value)}
                         autoFocus
@@ -62,9 +62,9 @@ const AddFriendModal = ({ onClose }) => {
                 </div>
 
                 <div className={styles.results}>
-                    {loading && <div className={styles.loading}>Searching...</div>}
+                    {loading && <div className={styles.loading}>搜索中...</div>}
                     {!loading && results.length === 0 && query && (
-                        <div className={styles.empty}>No users found</div>
+                        <div className={styles.empty}>未找到用户</div>
                     )}
                     {results.map(user => (
                         <div key={user.id} className={styles.userRow}>
@@ -77,7 +77,7 @@ const AddFriendModal = ({ onClose }) => {
                                 <span className={styles.username}>{user.username}</span>
                             </div>
                             {sentRequests.has(user.id) ? (
-                                <span className={styles.sentBadge}><Check size={14} /> Sent</span>
+                                <span className={styles.sentBadge}><Check size={14} /> 已发送</span>
                             ) : (
                                 <button className={styles.addBtn} onClick={() => handleAdd(user.id)}>
                                     <UserPlus size={18} />

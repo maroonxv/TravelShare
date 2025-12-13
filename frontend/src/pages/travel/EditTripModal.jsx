@@ -66,9 +66,9 @@ const EditTripModal = ({ trip, onClose, onSuccess }) => {
                             onChange={e => setFormData({ ...formData, visibility: e.target.value })}
                             style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                         >
-                            <option value="private">私有 (Private)</option>
-                            <option value="public">公开 (Public)</option>
-                            <option value="shared">共享 (Shared)</option>
+                            <option value="private">私有</option>
+                            <option value="public">公开</option>
+                            <option value="shared">共享</option>
                         </select>
                     </div>
 

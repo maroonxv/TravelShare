@@ -43,7 +43,7 @@ const AddMemberModal = ({ tripId, onClose, onSuccess }) => {
             onClose();
         } catch (err) {
             console.error("Failed to add member", err);
-            const errMsg = err.response?.data?.error || "Failed to add member";
+            const errMsg = err.response?.data?.error || "添加成员失败";
             setError(errMsg);
         } finally {
             setLoading(false);
