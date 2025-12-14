@@ -109,3 +109,27 @@ def get_conversation(conversation_id):
         "title": conversation.title,
         "messages": [msg.to_dict() for msg in conversation.messages]
     })
+
+@ai_bp.route('/conversations/<conversation_id>', methods=['DELETE'])
+def delete_conversation(conversation_id):
+    # Note: Add @login_required
+    # Get user_id from query params or body or g.user
+    user_id = request.args.get('user_id') 
+    if not user_id:
+        # Check if json exists before accessing it to avoid 415
+        if request.is_json:
+            user_id = request.json.get('user_id')
+
+    if not user_id:
+         if hasattr(g, 'user') and g.user:
+            user_id = g.user.id
+         else:
+            return jsonify({"error": "Unauthorized"}), 401
+            
+    service = get_ai_service()
+    success = service.delete_conversation(conversation_id, user_id)
+    
+    if not success:
+        return jsonify({"error": "Not found or unauthorized"}), 404
+        
+    return jsonify({"success": True})

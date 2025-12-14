@@ -24,6 +24,13 @@ class AiApplicationService:
         self.repository.save(conversation)
         return conversation
 
+    def delete_conversation(self, conversation_id: str, user_id: str) -> bool:
+        conversation = self.repository.get_by_id(conversation_id)
+        if not conversation or conversation.user_id != user_id:
+            return False
+        self.repository.delete(conversation_id)
+        return True
+
     def chat_stream(self, user_id: str, query: str, conversation_id: str = None) -> Generator[str, None, None]:
         # 1. Load or Create Conversation
         if conversation_id:

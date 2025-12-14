@@ -386,8 +386,9 @@ const ChatPage = () => {
                     <div className={styles.sectionTitle}>聊天</div>
                     {loading && <div className={styles.loadingContainer}><LoadingSpinner size="medium" /></div>}
                     {!loading && conversations.length === 0 && (
-                        <div className={styles.emptyState}>暂无聊天</div>
+                        <div style={{ padding: '1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>暂无聊天</div>
                     )}
+                    
                     {conversations.map(conv => (
                         <div
                             key={conv.id}

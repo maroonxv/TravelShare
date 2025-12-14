@@ -39,9 +39,9 @@ const Layout = () => {
                         <MessageSquare size={20} />
                         <span className={styles.linkText}>消息</span>
                     </Link>
-                    <Link to="/ai-assistant" className={`${styles.link} ${isActive('/ai-assistant') ? styles.activeAi : ''}`} title="AI助手">
+                    <Link to="/ai-assistant" className={`${styles.link} ${isActive('/ai-assistant') ? styles.activeAi : ''}`} title="TripMateAI">
                         <Bot size={20} />
-                        <span className={styles.linkText}>AI助手</span>
+                        <span className={styles.linkText}>TripMateAI</span>
                     </Link>
                     <Link to={`/profile/${user?.id}`} className={`${styles.link} ${isActive('/profile') ? styles.activeProfile : ''}`} title="我的">
                         <User size={20} />

@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import styles from './AiChatPage.module.css';
 import ReactMarkdown from 'react-markdown';
-import { MessageSquare, Plus, Clock, Bot, Send } from 'lucide-react';
+import { MessageSquare, Plus, Clock, Bot, Send, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const AiChatPage = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [conversations, setConversations] = useState([]);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -68,6 +70,29 @@ const AiChatPage = () => {
       setConversationId(null);
       setMessages([]);
       setInput('');
+  };
+
+  const handleDeleteConversation = async (id) => {
+      if (!window.confirm("确定要删除这个对话吗？")) return;
+
+      try {
+          const response = await fetch(`http://localhost:5001/api/ai/conversations/${id}?user_id=${user?.id || 'temp_user'}`, {
+              method: 'DELETE'
+          });
+
+          if (response.ok) {
+              setConversations(prev => prev.filter(c => c.id !== id));
+              if (conversationId === id) {
+                  handleNewChat();
+              }
+              toast.success("对话已删除");
+          } else {
+              toast.error("删除失败");
+          }
+      } catch (error) {
+          console.error("Failed to delete conversation", error);
+          toast.error("删除出错");
+      }
   };
 
   const handleSend = async () => {
@@ -152,24 +177,52 @@ const AiChatPage = () => {
       } else if (type === 'text_chunk') {
           setMessages(prev => {
               const newMessages = [...prev];
-              const lastMsg = newMessages[newMessages.length - 1];
+              const lastMsgIndex = newMessages.length - 1;
+              const lastMsg = { ...newMessages[lastMsgIndex] };
+
               if (lastMsg.role === 'assistant') {
                   lastMsg.content += data.delta;
+                  newMessages[lastMsgIndex] = lastMsg;
+              }
+              return newMessages;
+          });
+      } else if (type === 'message_end') {
+          setMessages(prev => {
+              const newMessages = [...prev];
+              const lastMsgIndex = newMessages.length - 1;
+              const lastMsg = { ...newMessages[lastMsgIndex] };
+
+              if (lastMsg.role === 'assistant') {
+                  lastMsg.content = data.full_text;
+                  newMessages[lastMsgIndex] = lastMsg;
               }
               return newMessages;
           });
       } else if (type === 'attachment') {
           setMessages(prev => {
               const newMessages = [...prev];
-              const lastMsg = newMessages[newMessages.length - 1];
+              const lastMsgIndex = newMessages.length - 1;
+              const lastMsg = { ...newMessages[lastMsgIndex] };
+
               if (lastMsg.role === 'assistant') {
-                  if (!lastMsg.attachments) lastMsg.attachments = [];
-                  if (!lastMsg.attachments.some(a => a.reference_id === data.reference_id)) {
-                      lastMsg.attachments.push(data);
+                  const newAttachments = lastMsg.attachments ? [...lastMsg.attachments] : [];
+                  if (!newAttachments.some(a => a.reference_id === data.reference_id)) {
+                      newAttachments.push(data);
                   }
+                  lastMsg.attachments = newAttachments;
+                  newMessages[lastMsgIndex] = lastMsg;
               }
               return newMessages;
           });
+      }
+  };
+
+  const handleAttachmentClick = (att) => {
+      if (att.type.toLowerCase() === 'post') {
+          navigate(`/social/post/${att.reference_id}`);
+      } else {
+          toast.success(`Found activity: ${att.title}`);
+          // TODO: Navigate to activity or trip
       }
   };
 
@@ -178,7 +231,7 @@ const AiChatPage = () => {
       {/* Sidebar - History */}
       <div className={styles.sidebar}>
           <div className={styles.sidebarHeader}>
-              <span className={styles.linkText}>TripMate</span>
+              <span className={styles.linkText}>TripMateAI</span>
               <button className={styles.newChatBtn} onClick={handleNewChat} title="新建对话">
                   <Plus size={20} />
               </button>
@@ -200,6 +253,16 @@ const AiChatPage = () => {
                           <Clock size={12} style={{ marginRight: 4, display: 'inline-block', verticalAlign: 'middle' }} />
                           {new Date(conv.updated_at).toLocaleDateString()}
                       </div>
+                      <button 
+                          className={styles.deleteBtn}
+                          onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteConversation(conv.id);
+                          }}
+                          title="删除对话"
+                      >
+                          <Trash2 size={14} />
+                      </button>
                   </div>
               ))}
           </div>
@@ -217,8 +280,8 @@ const AiChatPage = () => {
             {messages.length === 0 ? (
                 <div className={styles.emptyState}>
                     <Bot size={64} className={styles.emptyIcon} />
-                    <p>你好！我是你的旅行 AI 助手。</p>
-                    <p>我可以帮你规划行程、推荐景点，或者回答关于旅行的问题。</p>
+                    <p>你好！我是你的旅行 AI 助手 TripMateAI </p>
+                    <p>我可以帮你规划行程、推荐景点，或者回答关于旅行的问题</p>
                 </div>
             ) : (
                 messages.map((msg, index) => (
@@ -234,7 +297,12 @@ const AiChatPage = () => {
                     {msg.attachments && msg.attachments.length > 0 && (
                         <div className={styles.attachments}>
                             {msg.attachments.map((att, i) => (
-                                <div key={i} className={styles.card}>
+                                <div 
+                                    key={i} 
+                                    className={styles.card}
+                                    onClick={() => handleAttachmentClick(att)}
+                                    style={{ cursor: 'pointer' }}
+                                >
                                     <div className={styles.cardType}>{att.type.toUpperCase()}</div>
                                     <div className={styles.cardTitle}>{att.title}</div>
                                 </div>

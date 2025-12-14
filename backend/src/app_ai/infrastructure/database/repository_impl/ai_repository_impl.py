@@ -24,6 +24,9 @@ class AiRepositoryImpl(IAiRepository):
     def get_by_user_id(self, user_id: str, limit: int = 20) -> List[AiConversation]:
         pos = self.conversation_dao.get_by_user_id(user_id, limit)
         return [self._to_domain(po) for po in pos]
+
+    def delete(self, conversation_id: str) -> None:
+        self.conversation_dao.delete(conversation_id)
         
     def _to_po(self, conversation: AiConversation) -> AiConversationPO:
         messages_po = []

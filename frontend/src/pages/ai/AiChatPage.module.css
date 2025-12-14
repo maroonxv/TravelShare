@@ -75,12 +75,41 @@
   flex-direction: column;
   justify-content: center;
   padding: var(--spacing-sm) var(--spacing-md); /* Match ChatPage listItem padding */
+  padding-right: 32px; /* Make space for delete button */
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: background-color 0.15s ease;
   color: var(--text-secondary);
   height: 72px; /* Match ChatPage listItem height */
   margin-bottom: 2px;
+  position: relative;
+}
+
+.deleteBtn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.deleteBtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.historyItem:hover .deleteBtn {
+  opacity: 1;
 }
 
 .historyItem:hover {

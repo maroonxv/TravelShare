@@ -17,3 +17,8 @@ class IAiRepository(ABC):
     def get_by_user_id(self, user_id: str, limit: int = 20) -> List[AiConversation]:
         """获取用户的会话列表"""
         pass
+
+    @abstractmethod
+    def delete(self, conversation_id: str) -> None:
+        """删除会话"""
+        pass

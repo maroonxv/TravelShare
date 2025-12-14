@@ -22,3 +22,11 @@ class SqlAlchemyAiConversationDao(IAiConversationDao):
             AiConversationPO.user_id == user_id,
             AiConversationPO.is_deleted == False
         ).order_by(AiConversationPO.updated_at.desc()).limit(limit).all()
+
+    def delete(self, conversation_id: str) -> None:
+        po = self.session.query(AiConversationPO).filter(
+            AiConversationPO.id == conversation_id
+        ).first()
+        if po:
+            po.is_deleted = True
+            self.session.flush()

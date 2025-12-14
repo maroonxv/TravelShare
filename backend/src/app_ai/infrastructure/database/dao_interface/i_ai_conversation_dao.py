@@ -14,3 +14,7 @@ class IAiConversationDao(ABC):
     @abstractmethod
     def get_by_user_id(self, user_id: str, limit: int = 20) -> List[AiConversationPO]:
         pass
+
+    @abstractmethod
+    def delete(self, conversation_id: str) -> None:
+        pass

@@ -1,5 +1,6 @@
 from typing import List
-from sqlalchemy import or_
+import string
+from sqlalchemy import or_, literal, func
 from sqlalchemy.orm import Session
 from app_ai.domain.demand_interface.i_retriever import IRetriever
 from app_ai.domain.value_objects.retrieved_document import RetrievedDocument
@@ -13,14 +14,23 @@ class SqlAlchemyMysqlRetriever(IRetriever):
     def search(self, query: str, limit: int = 5) -> List[RetrievedDocument]:
         documents = []
         
-        # 1. Search Activities (App Travel)
-        # Simple keyword matching on name, location, and type
+        # Search by keyword matching
+        # Clean punctuation and split query into keywords
+        # Relaxed length constraint to >= 2 to support short words (especially Chinese)
+        query_clean = query.translate(str.maketrans('', '', string.punctuation))
+        keywords = [w for w in query_clean.split() if len(w) >= 2]
+        if not keywords:
+             keywords = [query]
+
+        # Activity Filters
+        activity_filters = []
+        for kw in keywords:
+            activity_filters.append(ActivityPO.name.like(f'%{kw}%'))
+            activity_filters.append(ActivityPO.location_name.like(f'%{kw}%'))
+            activity_filters.append(ActivityPO.activity_type.like(f'%{kw}%'))
+            
         activities = self.session.query(ActivityPO).filter(
-            or_(
-                ActivityPO.name.like(f'%{query}%'),
-                ActivityPO.location_name.like(f'%{query}%'),
-                ActivityPO.activity_type.like(f'%{query}%')
-            )
+            or_(*activity_filters)
         ).limit(limit).all()
         
         for act in activities:
@@ -33,15 +43,16 @@ class SqlAlchemyMysqlRetriever(IRetriever):
                 score=1.0 # Simple match, no scoring yet
             ))
             
-        # 2. Search Posts (App Social)
-        # Simple keyword matching on title and text
+        # Post Filters
+        post_filters = []
+        for kw in keywords:
+            post_filters.append(PostPO.title.like(f'%{kw}%'))
+            post_filters.append(PostPO.text.like(f'%{kw}%'))
+
         posts = self.session.query(PostPO).filter(
-            or_(
-                PostPO.title.like(f'%{query}%'),
-                PostPO.text.like(f'%{query}%')
-            ),
-            PostPO.is_deleted == False,
-            PostPO.visibility == 'public'
+             or_(*post_filters),
+             PostPO.is_deleted == False,
+             PostPO.visibility == 'public'
         ).limit(limit).all()
         
         for post in posts:

@@ -60,14 +60,45 @@ class AiChatDomainService:
             
         return attachments
 
+    def extract_search_keywords(self, query: str) -> str:
+        """
+        Use LLM to extract keywords from the user query.
+        """
+        system_prompt = """You are a search query optimizer.
+Your task is to extract the most relevant search keywords from the user's natural language query.
+The keywords will be used to search a database of travel posts and activities.
+
+Rules:
+1. Extract entity names (locations, attractions), activity types, and key concepts.
+2. Remove stop words, polite phrases ("help me find", "I want to know"), and irrelevant details.
+3. Return ONLY the keywords separated by spaces.
+4. If the query is already a list of keywords, return them as is.
+5. If the query is in Chinese, try to segment key entities (e.g. "上海迪士尼" -> "上海 迪士尼") to improve recall.
+"""
+        messages = [AiMessage(role='user', content=query)]
+        try:
+            # Use a short timeout or ensure it's fast? 
+            # The synchronous chat call is blocking, but it should be fine for this step.
+            keywords = self.llm_client.chat(messages, system_prompt)
+            # Basic cleanup of the response
+            keywords = keywords.strip().replace('\n', ' ')
+            return keywords
+        except Exception as e:
+            # Fallback to original query if LLM fails
+            print(f"Keyword extraction failed: {e}")
+            return query
+
     def stream_response(self, conversation: AiConversation, query: str) -> Generator[dict, None, None]:
         """
         Generator that yields SSE events.
         """
-        # 1. Retrieve
-        documents = self.retriever.search(query)
+        # 1. Extract Keywords
+        search_query = self.extract_search_keywords(query)
         
-        # 2. Build Prompt
+        # 2. Retrieve
+        documents = self.retriever.search(search_query)
+        
+        # 3. Build Prompt
         system_prompt = self.generate_system_prompt(documents)
         history = conversation.get_history_for_llm()
         

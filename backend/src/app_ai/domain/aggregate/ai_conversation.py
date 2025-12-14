@@ -1,5 +1,5 @@
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from app_ai.domain.entity.ai_message import AiMessage
@@ -12,13 +12,13 @@ class AiConversation:
         self.user_id = user_id
         self.title = title
         self.messages = messages or []
-        self.created_at = created_at or datetime.utcnow()
-        self.updated_at = updated_at or datetime.utcnow()
+        self.created_at = created_at or datetime.now(timezone.utc)
+        self.updated_at = updated_at or datetime.now(timezone.utc)
 
     def add_message(self, role: str, content: str, attachments: List[MessageAttachment] = None) -> AiMessage:
         message = AiMessage(role=role, content=content, attachments=attachments)
         self.messages.append(message)
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(timezone.utc)
         return message
     
     def get_history_for_llm(self, limit: int = 10):

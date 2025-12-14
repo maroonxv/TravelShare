@@ -1,5 +1,5 @@
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from app_ai.domain.value_objects.attachment import MessageAttachment
 
 class AiMessage:
@@ -7,7 +7,7 @@ class AiMessage:
         self.role = role
         self.content = content
         self.attachments = attachments or []
-        self.timestamp = timestamp or datetime.utcnow()
+        self.timestamp = timestamp or datetime.now(timezone.utc)
 
     def to_dict(self):
         return {
