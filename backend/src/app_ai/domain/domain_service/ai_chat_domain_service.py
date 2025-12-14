@@ -46,7 +46,13 @@ class AiChatDomainService:
             if doc.reference_id in seen_ids:
                 continue
             
-            att_type = AttachmentType.POST if doc.source_type == 'post' else AttachmentType.ACTIVITY
+            if doc.source_type == 'post':
+                att_type = AttachmentType.POST
+            elif doc.source_type == 'trip':
+                att_type = AttachmentType.TRIP
+            else:
+                att_type = AttachmentType.ACTIVITY
+
             # Note: image_url is not in RetrievedDocument yet, we might need to fetch it or include it in retrieval
             # For this version, we leave image_url empty
             
@@ -54,7 +60,8 @@ class AiChatDomainService:
                 type=att_type,
                 reference_id=doc.reference_id,
                 title=doc.title,
-                image_url=None 
+                image_url=None,
+                metadata=doc.metadata
             ))
             seen_ids.add(doc.reference_id)
             

@@ -218,11 +218,20 @@ const AiChatPage = () => {
   };
 
   const handleAttachmentClick = (att) => {
-      if (att.type.toLowerCase() === 'post') {
+      const type = att.type.toLowerCase();
+      if (type === 'post') {
           navigate(`/social/post/${att.reference_id}`);
+      } else if (type === 'trip') {
+          navigate(`/travel/${att.reference_id}`);
+      } else if (type === 'activity') {
+          if (att.metadata && att.metadata.trip_id) {
+               navigate(`/travel/${att.metadata.trip_id}`);
+               // toast.success(`Redirecting to trip containing: ${att.title}`);
+          } else {
+              toast.success(`Found activity: ${att.title}`);
+          }
       } else {
-          toast.success(`Found activity: ${att.title}`);
-          // TODO: Navigate to activity or trip
+          toast.success(`Found ${att.type}: ${att.title}`);
       }
   };
 
