@@ -10,7 +10,8 @@ import EditTransitModal from './EditTransitModal';
 import AddMemberModal from './AddMemberModal';
 import TripMembersModal from './TripMembersModal';
 import EditTripModal from './EditTripModal';
-import { Calendar, Users, DollarSign, MapPin, Clock, ArrowRight, ArrowLeft, Plus, Edit2 } from 'lucide-react';
+import TripMap from './TripMap';
+import { Calendar, Users, DollarSign, MapPin, Clock, ArrowRight, ArrowLeft, Plus, Edit2, Map as MapIcon, List } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import styles from './TripDetail.module.css';
 
@@ -28,6 +29,7 @@ const TripDetailPage = () => {
     const [isEditingStatus, setIsEditingStatus] = useState(false);
     const [editingActivity, setEditingActivity] = useState(null);
     const [editingTransit, setEditingTransit] = useState(null);
+    const [viewMode, setViewMode] = useState('timeline'); // 'timeline' or 'map'
 
     useEffect(() => {
         fetchTrip();
@@ -234,21 +236,78 @@ const TripDetailPage = () => {
             </div>
 
             {/* Day Tabs */}
-            <div className={styles.tabs}>
-                {days.map((day, idx) => (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <div className={styles.tabs} style={{ margin: 0 }}>
+                    {days.map((day, idx) => (
+                        <button
+                            key={idx}
+                            className={`${styles.tab} ${activeDayIdx === idx ? styles.activeTab : ''}`}
+                            onClick={() => setActiveDayIdx(idx)}
+                        >
+                            第 {idx + 1} 天
+                        </button>
+                    ))}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', background: '#f1f5f9', padding: '0.25rem', borderRadius: '0.5rem' }}>
                     <button
-                        key={idx}
-                        className={`${styles.tab} ${activeDayIdx === idx ? styles.activeTab : ''}`}
-                        onClick={() => setActiveDayIdx(idx)}
+                        onClick={() => setViewMode('timeline')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.375rem',
+                            border: 'none',
+                            background: viewMode === 'timeline' ? 'white' : 'transparent',
+                            boxShadow: viewMode === 'timeline' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                            cursor: 'pointer',
+                            color: viewMode === 'timeline' ? '#0f172a' : '#64748b',
+                            fontWeight: 500
+                        }}
                     >
-                        第 {idx + 1} 天
+                        <List size={18} />
+                        列表
                     </button>
-                ))}
+                    <button
+                        onClick={() => setViewMode('map')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.375rem',
+                            border: 'none',
+                            background: viewMode === 'map' ? 'white' : 'transparent',
+                            boxShadow: viewMode === 'map' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                            cursor: 'pointer',
+                            color: viewMode === 'map' ? '#0f172a' : '#64748b',
+                            fontWeight: 500
+                        }}
+                    >
+                        <MapIcon size={18} />
+                        地图
+                    </button>
+                </div>
             </div>
 
-            {/* Timeline View */}
-            <div className={styles.timeline}>
-                {currentDay && (
+            {viewMode === 'map' ? (
+                 <div style={{ marginBottom: '2rem' }}>
+                     {currentDay ? (
+                         <TripMap 
+                             activities={currentDay.activities || []} 
+                             transits={currentDay.transits || []}
+                         />
+                     ) : (
+                         <div style={{ padding: '2rem', textAlign: 'center', background: '#f8fafc', borderRadius: '0.5rem', color: '#64748b' }}>
+                             请先选择行程日期
+                         </div>
+                     )}
+                 </div>
+            ) : (
+                /* Timeline View */
+                <div className={styles.timeline}>
+                    {currentDay && (
                     <>
                         {/* Activities */}
                         {currentDay.activities && currentDay.activities.length > 0 ? (
@@ -287,7 +346,7 @@ const TripDetailPage = () => {
                                                     {activity.location_name}
                                                 </div>
                                                 <div className={styles.cost}>
-                                                    {fmtMoney(activity.cost)}
+                                                    {fmtMoney(activity.cost?.amount || 0)}
                                                 </div>
                                             </div>
                                         </div>
@@ -355,7 +414,7 @@ const TripDetailPage = () => {
                 )}
 
                 {/* Add Activity Button */}
-                {isCurrentUserAdmin && (
+                {currentDay && isCurrentUserAdmin && (
                     <div className={styles.addBtnContainer}>
                         <Button variant="travel" onClick={() => setShowAddModal(true)}>
                             + 添加活动
@@ -363,6 +422,7 @@ const TripDetailPage = () => {
                     </div>
                 )}
             </div>
+            )}
 
             {showAddModal && (
                 <AddActivityModal

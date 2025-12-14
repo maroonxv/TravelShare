@@ -33,7 +33,7 @@ const EditTransitModal = ({ tripId, dayIndex, transit, onClose, onSuccess, isOpe
         } catch (error) {
             console.error('Failed to update transit', error);
             // Handle backend specific error messages if available
-            const msg = error.response?.data?.detail || '更新失败，请重试';
+            const msg = error.response?.data?.error || error.response?.data?.detail || '更新失败，请重试';
             toast.error(msg);
         } finally {
             setLoading(false);

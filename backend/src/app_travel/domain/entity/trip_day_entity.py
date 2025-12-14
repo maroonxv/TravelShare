@@ -138,6 +138,10 @@ class TripDay:
                 return sorted_activities[i + 1]
         return None
     
+    def get_activity(self, activity_id: str) -> Optional[Activity]:
+        """获取指定活动 (alias for find_activity)"""
+        return self.find_activity(activity_id)
+
     # ==================== Transit 属性和方法 ====================
     
     @property

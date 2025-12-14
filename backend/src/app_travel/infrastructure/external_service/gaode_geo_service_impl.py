@@ -106,26 +106,25 @@ class GaodeGeoServiceImpl(IGeoService):
             if data.get("status") == "1" and data.get("regeocode"):
                 comp = data["regeocode"].get("addressComponent", {})
                 
-                # 优先使用 adcode (区域编码)
-                if comp.get("adcode"):
-                    return str(comp["adcode"])
+                # 优先使用 citycode (API要求 city1 参数为 citycode)
+                citycode = comp.get("citycode")
+                if citycode and isinstance(citycode, str):
+                    return citycode
+                elif citycode and isinstance(citycode, list) and len(citycode) > 0:
+                     return str(citycode[0])
                 
-                # 其次尝试 city
-                city = comp.get("city")
-                if isinstance(city, str) and city:
-                    return city
-                elif isinstance(city, list) and len(city) > 0: # 某些情况 city 可能是列表
-                    return str(city[0])
-                    
-                # 如果 city 为空（如直辖市），使用 province
-                province = comp.get("province")
-                if isinstance(province, str) and province:
-                    return province
-                    
-            return "北京" # 默认降级
+                # 如果没有 citycode，尝试使用 adcode (虽然文档说只支持 citycode，但在某些情况下 adcode 可能有用，或者作为备选)
+                # 但根据文档严格性，如果没有 citycode，可能无法进行公交规划
+                # 这里我们尽量返回一个有意义的值，或者默认 010
+                if comp.get("adcode"):
+                    # 注意：有些文档暗示 citycode 字段为空时可能是直辖市，此时 adcode 前4位或3位可能对应 citycode？
+                    # 但通常直辖市也有 citycode (010, 021 etc)
+                    pass
+
+            return "010" # 默认降级为北京 citycode
         except Exception as e:
             print(f"Get city info error: {e}")
-            return "北京"
+            return "010"
 
     def get_route(
         self,
@@ -171,8 +170,10 @@ class GaodeGeoServiceImpl(IGeoService):
             "destination": f"{destination.longitude},{destination.latitude}",
             "output": "json",
             "show_fields": "cost,polyline", # 显式请求 cost 和 polyline
-            "strategy": "2" # 2: 距离优先（避免默认的速度优先导致绕路）
         }
+        
+        if mode == "driving":
+            params["strategy"] = "2" # 2: 距离优先（避免默认的速度优先导致绕路）
         
         if mode == "transit":
             # 公交路径规划需要城市信息
@@ -185,7 +186,14 @@ class GaodeGeoServiceImpl(IGeoService):
             params["strategy"] = "0" 
             
         try:
+            print(f"Requesting Gaode API: {url} with params: {params}")
             response = requests.get(url, params=params)
+            print(f"Gaode Response Status: {response.status_code}")
+            try:
+                print(f"Gaode Response Body: {response.text[:500].encode('utf-8', errors='ignore').decode('utf-8')}") 
+            except Exception:
+                print("Gaode Response Body: (Print failed)")
+            
             data = response.json()
             
             # 检查 API 状态

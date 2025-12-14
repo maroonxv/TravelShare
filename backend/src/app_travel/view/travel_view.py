@@ -218,7 +218,8 @@ def create_trip():
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         traceback.print_exc()
-        return jsonify({'error': 'Internal server error'}), 500
+        # Return the actual error message for debugging
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 @travel_bp.route('/trips/<trip_id>', methods=['GET'])
 def get_trip(trip_id):
@@ -474,7 +475,7 @@ def modify_transit(trip_id, day_index, transit_id):
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         traceback.print_exc()
-        return jsonify({'error': 'Internal server error'}), 500
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 @travel_bp.route('/trips/<trip_id>/days/<int:day_index>/activities/<activity_id>', methods=['DELETE'])
 def remove_activity(trip_id, day_index, activity_id):
