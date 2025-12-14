@@ -61,3 +61,12 @@ export const removeMember = async (tripId, userId) => {
     const response = await client.delete(`/travel/trips/${tripId}/members/${userId}`);
     return response.data;
 };
+
+export const updateTransit = async (tripId, dayIndex, transitId, transitData) => {
+    // Note: Assuming backend endpoint structure. Adjust if necessary.
+    // Based on typical REST patterns: /travel/trips/{tripId}/days/{dayIndex}/transits/{transitId}
+    // Or if transits are updated via the day update or a specific transit endpoint.
+    // Let's assume a dedicated endpoint for updating transit mode/details.
+    const response = await client.put(`/travel/trips/${tripId}/days/${dayIndex}/transits/${transitId}`, transitData);
+    return response.data;
+};

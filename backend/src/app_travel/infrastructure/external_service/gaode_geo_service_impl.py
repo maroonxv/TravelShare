@@ -147,7 +147,8 @@ class GaodeGeoServiceImpl(IGeoService):
         if not origin.has_coordinates() or not destination.has_coordinates():
             return {}
 
-        # 映射 mode 到高德 API 路径
+        # 映射 mode 到高德 API 路径 (API 2.0 / v5)
+        # 文档参考: GAODE_API_DOC.md
         mode_map = {
             "driving": "direction/driving",
             "walking": "direction/walking",
@@ -156,54 +157,108 @@ class GaodeGeoServiceImpl(IGeoService):
             "bicycling": "direction/bicycling"
         }
         
+        # 默认使用 v5 接口
         api_path = mode_map.get(mode, "direction/driving")
-        url = f"{self.base_url}/{api_path}"
+        # 注意：v5 接口的 base_url 通常是 https://restapi.amap.com/v5
+        # 原有的 self.base_url 是 v3，我们需要区分处理或者统一升级
+        # 这里为了稳妥，针对路径规划使用 v5
+        base_url_v5 = "https://restapi.amap.com/v5"
+        url = f"{base_url_v5}/{api_path}"
         
         params = {
             "key": self.api_key,
             "origin": f"{origin.longitude},{origin.latitude}",
             "destination": f"{destination.longitude},{destination.latitude}",
-            "output": "json"
+            "output": "json",
+            "show_fields": "cost,polyline", # 显式请求 cost 和 polyline
+            "strategy": "2" # 2: 距离优先（避免默认的速度优先导致绕路）
         }
         
         if mode == "transit":
             # 公交路径规划需要城市信息
-            # 通过逆地理编码获取起点城市代码
-            city_info = self._get_city_info(origin.latitude, origin.longitude)
-            params["city"] = city_info
+            # v5 接口参数是 city1 和 city2
+            city1 = self._get_city_info(origin.latitude, origin.longitude)
+            city2 = self._get_city_info(destination.latitude, destination.longitude)
+            params["city1"] = city1
+            params["city2"] = city2
+            # v5 接口公交策略默认 0: 推荐模式
+            params["strategy"] = "0" 
             
         try:
             response = requests.get(url, params=params)
             data = response.json()
             
-            if data.get("status") == "1" and data.get("route"):
-                route = data["route"]
-                result = {
-                    "origin": f"{origin.longitude},{origin.latitude}",
-                    "destination": f"{destination.longitude},{destination.latitude}",
-                    "paths": []
+            # 检查 API 状态
+            # status: 1 成功, 0 失败
+            if data.get("status") != "1":
+                # 记录详细错误信息
+                infocode = data.get("infocode")
+                info = data.get("info")
+                print(f"Gaode API error: mode={mode}, infocode={infocode}, info={info}")
+                return {}
+            
+            # 检查是否有路线数据
+            # v5 接口返回 route 对象
+            route = data.get("route")
+            if not route:
+                return {}
+
+            result = {
+                "origin": f"{origin.longitude},{origin.latitude}",
+                "destination": f"{destination.longitude},{destination.latitude}",
+                "paths": []
+            }
+            
+            # 解析 paths
+            # v5 接口:
+            # driving/walking/bicycling -> route.paths
+            # transit -> route.transits
+            paths_data = []
+            if mode == "transit":
+                paths_data = route.get("transits", [])
+            else:
+                paths_data = route.get("paths", [])
+                
+            if not paths_data:
+                return {}
+
+            for p in paths_data:
+                # 提取距离和耗时
+                distance = float(p.get("distance", 0))
+                
+                # 提取耗时 (duration)
+                # v5 接口: cost.duration 或 duration (取决于模式)
+                duration = 0
+                if "cost" in p and "duration" in p["cost"]:
+                     duration = float(p["cost"]["duration"])
+                elif "duration" in p: # transit 模式直接在 transit item 下
+                     duration = float(p.get("duration", 0))
+                
+                # 提取 Polyline
+                # v5 接口: 需要 show_fields=polyline 并在 steps/segments 中或者外层获取
+                # 简化处理：这里暂不深度拼接 polyline，除非前端强需求
+                # 如果 API 直接返回了 polyline (如 transit 的某些情况或 driving 的某些情况)，则使用
+                # 注意：v5 文档显示 polyline 可能在 steps 中，需要拼接
+                polyline = ""
+                
+                path_info = {
+                    "distance": distance,
+                    "duration": duration,
+                    "steps": [],
+                    "polyline": polyline 
                 }
                 
-                paths = route.get("paths", [])
+                # 简化步骤信息
+                steps = []
                 if mode == "transit":
-                    paths = route.get("transits", [])
-                    
-                for p in paths:
-                    path_info = {
-                        "distance": float(p.get("distance", 0)),
-                        "duration": float(p.get("duration", 0)),
-                        "steps": []
-                    }
-                    # 简化步骤信息
+                    steps = p.get("segments", [])
+                else:
                     steps = p.get("steps", [])
-                    if mode == "transit":
-                        steps = p.get("segments", []) # 公交是 segments
-                        
-                    path_info["steps"] = len(steps)
-                    result["paths"].append(path_info)
                     
-                return result
-            return {}
+                path_info["steps"] = len(steps)
+                result["paths"].append(path_info)
+                
+            return result
         except Exception as e:
             print(f"Get route error: {e}")
             return {}

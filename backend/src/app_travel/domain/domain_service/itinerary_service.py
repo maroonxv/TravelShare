@@ -4,7 +4,7 @@ ItineraryService 领域服务 - 智能行程管家
 负责计算活动之间的交通路线、验证行程可行性、地址解析等。
 """
 from datetime import datetime, date
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from app_travel.domain.entity.activity import Activity
 from app_travel.domain.entity.transit import Transit
@@ -45,16 +45,18 @@ class ItineraryService:
     def calculate_transits_between_activities(
         self,
         activities: List[Activity],
-        mode: TransportMode = TransportMode.DRIVING
+        mode: TransportMode = TransportMode.DRIVING,
+        preferred_modes: Optional[Dict[tuple[str, str], TransportMode]] = None
     ) -> TransitCalculationResult:
         """计算活动列表中两两之间的最佳路径
         
         按时间顺序计算相邻活动之间的交通。
-        如果距离 < 2km，自动切换为步行模式。
+        支持用户指定特定路段的交通方式偏好。
         
         Args:
             activities: 活动列表（会按开始时间排序）
-            mode: 默认交通方式，默认驾车
+            mode: 默认交通方式（当未指定偏好且不满足步行条件时使用），默认驾车
+            preferred_modes: 用户指定的偏好映射 {(from_id, to_id): mode}
             
         Returns:
             TransitCalculationResult: 包含Transit列表和警告
@@ -66,16 +68,49 @@ class ItineraryService:
         
         # 按开始时间排序
         sorted_activities = sorted(activities, key=lambda a: a.start_time)
+        preferred_modes = preferred_modes or {}
         
         # 计算相邻活动之间的交通
         for i in range(len(sorted_activities) - 1):
             from_activity = sorted_activities[i]
             to_activity = sorted_activities[i + 1]
             
-            try:
-                transit = self.calculate_transit_between_two_activities(
-                    from_activity, to_activity, mode
-                )
+            # 1. 检查是否有用户偏好
+            user_mode = preferred_modes.get((from_activity.id, to_activity.id))
+            
+            transit = None
+            
+            # 2. 尝试使用用户偏好
+            if user_mode:
+                try:
+                    transit = self._calculate_transit_with_mode(
+                        from_activity, to_activity, user_mode
+                    )
+                except ValueError as e:
+                    # 偏好方式不可行，添加警告并降级
+                    result.add_warning(ItineraryWarning.unreachable(
+                        from_activity.id,
+                        to_activity.id,
+                        f"用户偏好交通方式 {user_mode.value} 不可用: {str(e)}，已尝试自动规划"
+                    ))
+                    transit = None
+
+            # 3. 如果没有偏好或偏好计算失败，使用默认智能策略
+            if not transit:
+                try:
+                    transit = self._calculate_transit_smart_fallback(
+                        from_activity, to_activity, default_mode=mode
+                    )
+                except Exception as e:
+                    # 所有尝试都失败
+                    result.add_warning(ItineraryWarning.unreachable(
+                        from_activity.id,
+                        to_activity.id,
+                        f"无法计算路线: {str(e)}"
+                    ))
+                    continue
+
+            if transit:
                 result.add_transit(transit)
                 
                 # 检查时间是否足够
@@ -84,16 +119,92 @@ class ItineraryService:
                 )
                 if warning:
                     result.add_warning(warning)
-                    
-            except Exception as e:
-                # 无法计算路线时添加警告
-                result.add_warning(ItineraryWarning.unreachable(
-                    from_activity.id,
-                    to_activity.id,
-                    f"无法计算路线: {str(e)}"
-                ))
         
         return result
+
+    def _calculate_transit_with_mode(
+        self,
+        from_activity: Activity,
+        to_activity: Activity,
+        mode: TransportMode
+    ) -> Transit:
+        """指定模式计算交通，包含严格校验"""
+        origin = from_activity.location
+        destination = to_activity.location
+        
+        # 1. 硬性规则校验
+        distance = self._geo_service.calculate_distance(origin, destination)
+        distance_km = distance / 1000
+        
+        if mode == TransportMode.WALKING and distance_km > 50:
+            raise ValueError("步行距离超过 50km")
+        if mode == TransportMode.CYCLING and distance_km > 100:
+            raise ValueError("骑行距离超过 100km")
+            
+        # 2. 调用 API
+        route_data = self._geo_service.get_route(
+            origin, destination, mode.value
+        )
+        
+        # 3. 解析结果
+        route_info = self._parse_route_info(route_data)
+        
+        # 如果距离为0且耗时为0（通常意味着 API 返回空或无效），视为失败
+        if route_info.distance_meters == 0 and route_info.duration_seconds == 0:
+             raise ValueError(f"无法获取 {mode.value} 路线数据")
+
+        return Transit.create_from_activities(
+            from_activity, to_activity, route_info, mode
+        )
+
+    def _calculate_transit_smart_fallback(
+        self,
+        from_activity: Activity,
+        to_activity: Activity,
+        default_mode: TransportMode
+    ) -> Transit:
+        """智能降级策略计算
+        
+        逻辑：
+        1. 距离 < 2km -> 优先步行
+        2. 否则 -> 优先驾车
+        3. 驾车失败 -> 尝试公交
+        """
+        origin = from_activity.location
+        destination = to_activity.location
+        
+        # 计算直线距离
+        straight_distance = self._geo_service.calculate_distance(origin, destination)
+        
+        # 策略 1: 短距离优先步行
+        if straight_distance < self.WALKING_DISTANCE_THRESHOLD:
+            try:
+                return self._calculate_transit_with_mode(
+                    from_activity, to_activity, TransportMode.WALKING
+                )
+            except ValueError:
+                # 步行失败（罕见），继续后续策略
+                pass
+        
+        # 策略 2: 优先驾车 (默认模式通常是驾车)
+        # 如果默认模式不是驾车，这里也优先尝试默认模式
+        primary_mode = default_mode
+        try:
+            return self._calculate_transit_with_mode(
+                from_activity, to_activity, primary_mode
+            )
+        except ValueError:
+            # 策略 3: 驾车失败，尝试公交
+            # 只有当首选不是公交时才尝试，避免重复
+            if primary_mode != TransportMode.TRANSIT:
+                try:
+                    return self._calculate_transit_with_mode(
+                        from_activity, to_activity, TransportMode.TRANSIT
+                    )
+                except ValueError:
+                    pass
+        
+        raise ValueError("所有交通方式均不可达")
     
     def calculate_transit_between_two_activities(
         self,
@@ -101,43 +212,30 @@ class ItineraryService:
         to_activity: Activity,
         mode: TransportMode = TransportMode.DRIVING
     ) -> Transit:
-        """计算两个活动之间的交通
-        
-        如果距离 < 2km，自动切换为步行模式。
+        """(已弃用，保留兼容性) 计算两个活动之间的交通"""
+        return self._calculate_transit_smart_fallback(from_activity, to_activity, mode)
+
+    def calculate_specific_transit(
+        self,
+        from_activity: Activity,
+        to_activity: Activity,
+        mode: TransportMode
+    ) -> Transit:
+        """指定模式计算交通（无智能降级）
         
         Args:
             from_activity: 起始活动
             to_activity: 目标活动
-            mode: 默认交通方式
+            mode: 指定的交通方式
             
         Returns:
-            Transit: 交通实体
+            Transit: 计算出的交通实体
+            
+        Raises:
+            ValueError: 如果计算失败或违反规则
         """
-        origin = from_activity.location
-        destination = to_activity.location
-        
-        # 先计算直线距离判断是否使用步行
-        actual_mode = mode
-        straight_distance = self._geo_service.calculate_distance(origin, destination)
-        
-        if straight_distance < self.WALKING_DISTANCE_THRESHOLD:
-            actual_mode = TransportMode.WALKING
-        
-        # 获取路线信息
-        route_data = self._geo_service.get_route(
-            origin, destination, actual_mode.value
-        )
-        
-        # 解析路线信息
-        route_info = self._parse_route_info(route_data)
-        
-        # 创建 Transit
-        transit = Transit.create_from_activities(
-            from_activity, to_activity, route_info, actual_mode
-        )
-        
-        return transit
-    
+        return self._calculate_transit_with_mode(from_activity, to_activity, mode)
+
     def geocode_fuzzy_location(self, fuzzy_name: str) -> Location:
         """根据模糊地名获取精确坐标和标准地址
         

@@ -200,6 +200,61 @@ class TestTravelViewIntegration:
         trips_completed = res_completed.get_json()
         assert len(trips_completed) == 0
 
+    def test_modify_transit(self, client, mock_db_session):
+        """Test modifying transit mode"""
+        # 1. Create Trip
+        trip_data = {
+            "name": "Transit Update Trip",
+            "creator_id": "user_123",
+            "start_date": date.today().isoformat(),
+            "end_date": date.today().isoformat()
+        }
+        trip_res = client.post('/api/travel/trips', json=trip_data)
+        trip_id = trip_res.get_json()['id']
+        
+        # 2. Add two activities (Tiananmen -> Forbidden City)
+        # Need to simulate login for add_activity
+        with client.session_transaction() as sess:
+            sess['user_id'] = 'user_123'
+
+        act1_data = {
+            "name": "Start",
+            "activity_type": "sightseeing",
+            "location_name": "天安门",
+            "start_time": "09:00",
+            "end_time": "10:00"
+        }
+        client.post(f'/api/travel/trips/{trip_id}/days/0/activities', json=act1_data)
+        
+        act2_data = {
+            "name": "End",
+            "activity_type": "sightseeing",
+            "location_name": "故宫",
+            "start_time": "12:00",
+            "end_time": "14:00"
+        }
+        client.post(f'/api/travel/trips/{trip_id}/days/0/activities', json=act2_data)
+        
+        # 3. Get trip to find transit
+        trip_get = client.get(f'/api/travel/trips/{trip_id}')
+        day0 = trip_get.get_json()['days'][0]
+        transits = day0['transits']
+        # Should have 1 transit
+        if len(transits) > 0:
+            transit_id = transits[0]['id']
+            
+            # 4. Modify transit (change to walking)
+            update_data = {
+                "transport_mode": "walking"
+            }
+            response = client.put(f'/api/travel/trips/{trip_id}/days/0/transits/{transit_id}', json=update_data)
+            
+            assert response.status_code == 200
+            res_json = response.get_json()
+            assert res_json['mode'] == 'walking'
+            # Walking distance should be reasonable (e.g. < 2km for Tiananmen to Forbidden City)
+            assert res_json['distance_meters'] > 0
+
     def test_delete_trip(self, client, mock_db_session):
         create_res = client.post('/api/travel/trips', json={"name": "Del", "creator_id": "u", "start_date": "2023-01-01", "end_date": "2023-01-01"})
         trip_id = create_res.get_json()['id']

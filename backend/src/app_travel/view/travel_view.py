@@ -135,6 +135,7 @@ def serialize_activity(activity) -> dict:
 def serialize_transit(transit) -> dict:
     """序列化 Transit"""
     return {
+        'id': transit.id,
         'from_activity_id': transit.from_activity_id,
         'to_activity_id': transit.to_activity_id,
         'mode': transit.transport_mode.value,
@@ -438,6 +439,42 @@ def modify_activity(trip_id, day_index, activity_id):
         return jsonify(serialize_transit_result(result))
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
+
+@travel_bp.route('/trips/<trip_id>/days/<int:day_index>/transits/<transit_id>', methods=['PUT'])
+def modify_transit(trip_id, day_index, transit_id):
+    """修改交通方式"""
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+
+    data = request.get_json()
+    service = get_travel_service()
+    
+    try:
+        result = service.modify_transit(
+            trip_id=trip_id,
+            day_index=day_index,
+            transit_id=transit_id,
+            operator_id=current_user_id,
+            transport_mode=data.get('transport_mode')
+        )
+        
+        if result is None:
+            # Trip or Transit not found, or no changes
+            return jsonify({'error': 'Trip or Transit not found or no changes made'}), 404
+            
+        g.session.commit()
+        # 为了兼容现有集成测试，这里返回单个 Transit 对象
+        # 通常 modify_transit 只会影响一个 Transit
+        if result.transits:
+            return jsonify(serialize_transit(result.transits[0]))
+        # 如果没有 Transit，退回通用结构
+        return jsonify(serialize_transit_result(result))
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
 
 @travel_bp.route('/trips/<trip_id>/days/<int:day_index>/activities/<activity_id>', methods=['DELETE'])
 def remove_activity(trip_id, day_index, activity_id):

@@ -428,6 +428,34 @@ class TravelService:
         
         return result or TransitCalculationResult()
 
+    def modify_transit(
+        self,
+        trip_id: str,
+        day_index: int,
+        transit_id: str,
+        operator_id: str,
+        transport_mode: Optional[str] = None
+    ) -> Optional[TransitCalculationResult]:
+        """修改交通方式"""
+        trip = self._trip_repository.find_by_id(TripId(trip_id))
+        if not trip:
+            return None
+            
+        itinerary_service = self._create_itinerary_service()
+        result = trip.modify_transit(
+            day_index=day_index,
+            transit_id=transit_id,
+            operator_id=operator_id,
+            itinerary_service=itinerary_service,
+            transport_mode=transport_mode
+        )
+        
+        if result:
+            self._trip_repository.save(trip)
+            self._publish_events(trip)
+        
+        return result
+
     def remove_activity(
         self,
         trip_id: str,

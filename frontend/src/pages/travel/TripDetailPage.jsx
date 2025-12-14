@@ -6,6 +6,7 @@ import Button from '../../components/Button';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import AddActivityModal from './AddActivityModal';
 import EditActivityModal from './EditActivityModal';
+import EditTransitModal from './EditTransitModal';
 import AddMemberModal from './AddMemberModal';
 import TripMembersModal from './TripMembersModal';
 import EditTripModal from './EditTripModal';
@@ -26,6 +27,7 @@ const TripDetailPage = () => {
     const [showEditModal, setShowEditModal] = useState(false);
     const [isEditingStatus, setIsEditingStatus] = useState(false);
     const [editingActivity, setEditingActivity] = useState(null);
+    const [editingTransit, setEditingTransit] = useState(null);
 
     useEffect(() => {
         fetchTrip();
@@ -293,23 +295,54 @@ const TripDetailPage = () => {
                                         {/* Transit between this and next */}
                                         {transit && (
                                             <div className={styles.timelineItem} style={{ minHeight: 'auto', margin: '0.5rem 0' }}>
-                                                 <div className={styles.timelineParams}></div>
-                                                 <div className={styles.dot} style={{ background: 'transparent', border: 'none', display: 'flex', justifyContent: 'center' }}>
+                                                <div className={styles.timelineParams}></div>
+                                                <div className={styles.dot} style={{ background: 'transparent', border: 'none', display: 'flex', justifyContent: 'center' }}>
                                                     <div style={{ width: '2px', height: '100%', background: '#e2e8f0' }}></div>
-                                                 </div>
-                                                 <div style={{ paddingLeft: '1rem', color: '#fff', fontSize: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                </div>
+                                                <div 
+                                                    style={{ 
+                                                        paddingLeft: '1rem', 
+                                                        color: '#fff', 
+                                                        fontSize: '1.1rem', 
+                                                        display: 'flex', 
+                                                        flexDirection: 'column', 
+                                                        gap: '0.25rem'
+                                                    }}
+                                                    className={isCurrentUserAdmin ? styles.transitItemHover : ''}
+                                                >
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 500 }}>
                                                         <ArrowRight size={16} />
                                                         <span>{TRANSIT_MODE_MAP[transit.mode] || transit.mode}</span>
                                                         <span>({Math.round(transit.duration_seconds / 60)} 分钟)</span>
                                                         <span>{(transit.distance_meters / 1000).toFixed(1)} km</span>
+                                                        {isCurrentUserAdmin && (
+                                                            <button 
+                                                                type="button"
+                                                                title="修改交通方式" 
+                                                                style={{ 
+                                                                    display: 'flex', 
+                                                                    alignItems: 'center', 
+                                                                    marginLeft: '0.75rem', 
+                                                                    padding: '4px 10px', 
+                                                                    borderRadius: '999px', 
+                                                                    background: 'rgba(15,23,42,0.85)', 
+                                                                    border: '1px solid rgba(148,163,184,0.8)',
+                                                                    cursor: 'pointer',
+                                                                    color: '#e5e7eb'
+                                                                }}
+                                                                onClick={() => setEditingTransit(transit)}
+                                                            >
+                                                                <Edit2 size={12} />
+                                                                <span style={{ fontSize: '0.8rem', marginLeft: '4px', fontWeight: 600 }}>修改交通方式</span>
+                                                            </button>
+                                                        )}
                                                     </div>
                                                     {(transit.mode === 'driving' || transit.mode === 'DRIVING') && transit.cost && (
                                                         <div style={{ fontSize: '0.9rem', color: '#94a3b8', marginLeft: '1.5rem' }}>
                                                             交通费: 5元, 油费: {transit.cost.fuel_cost || 0}元
                                                         </div>
                                                     )}
-                                                 </div>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -346,6 +379,16 @@ const TripDetailPage = () => {
                     dayIndex={activeDayIdx}
                     activity={editingActivity}
                     onClose={() => setEditingActivity(null)}
+                    onSuccess={fetchTrip}
+                />
+            )}
+
+            {editingTransit && (
+                <EditTransitModal
+                    tripId={id}
+                    dayIndex={activeDayIdx}
+                    transit={editingTransit}
+                    onClose={() => setEditingTransit(null)}
                     onSuccess={fetchTrip}
                 />
             )}

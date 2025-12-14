@@ -15,6 +15,9 @@ from app_travel.domain.entity.trip_day_entity import TripDay
 from app_travel.domain.entity.trip_member import TripMember
 from app_travel.domain.entity.activity import Activity
 from app_travel.domain.entity.transit import Transit
+from app_travel.domain.value_objects.transit_value_objects import (
+    TransportMode
+)
 from app_travel.domain.value_objects.itinerary_value_objects import (
     TransitCalculationResult, ItineraryWarning
 )
@@ -660,7 +663,101 @@ class Trip:
             return result
         
         return None
-    
+
+    def modify_transit(
+        self,
+        day_index: int,
+        transit_id: str,
+        operator_id: str,
+        itinerary_service: 'ItineraryService',
+        transport_mode: Optional[str] = None
+    ) -> Optional[TransitCalculationResult]:
+        """修改交通方式
+        
+        Args:
+            day_index: 日期索引
+            transit_id: 交通ID
+            operator_id: 操作者ID
+            itinerary_service: 行程服务
+            transport_mode: 新的交通方式字符串
+            
+        Returns:
+            TransitCalculationResult: 包含更新后的Transit
+        """
+        # 权限检查
+        if not self.is_admin(operator_id):
+            raise ValueError("Only trip admins can modify transit")
+
+        if day_index < 0 or day_index >= len(self._days):
+            raise ValueError(f"Invalid day index: {day_index}")
+            
+        day = self._days[day_index]
+        
+        # 查找 Transit
+        target_transit = None
+        for t in day.transits:
+            if t.id == transit_id:
+                target_transit = t
+                break
+        
+        if not target_transit:
+            return None
+            
+        # 如果没有更改，直接返回
+        if not transport_mode:
+            return None
+
+        # 解析新模式
+        try:
+            new_mode = TransportMode.from_string(transport_mode)
+        except ValueError:
+            raise ValueError(f"Invalid transport mode: {transport_mode}")
+
+        if target_transit.transport_mode == new_mode:
+            return None
+            
+        # 查找相关联的 Activity
+        from_activity = day.get_activity(target_transit.from_activity_id)
+        to_activity = day.get_activity(target_transit.to_activity_id)
+        
+        if not from_activity or not to_activity:
+            # 如果找不到关联活动（可能已被删除？但在同一个事务中应该是一致的）
+            raise ValueError("Related activities not found")
+            
+        result = TransitCalculationResult()
+        
+        # 重新计算
+        try:
+            new_transit = itinerary_service.calculate_specific_transit(
+                from_activity, to_activity, new_mode
+            )
+            
+            # 更新现有 Transit
+            target_transit.update(
+                transport_mode=new_transit.transport_mode,
+                route_info=new_transit.route_info
+            )
+            
+            result.add_transit(target_transit)
+            
+            # 检查时间可行性
+            warnings = itinerary_service.validate_itinerary_feasibility(
+                [from_activity, to_activity], [target_transit]
+            )
+            for warning in warnings:
+                result.add_warning(warning)
+                
+        except Exception as e:
+            raise ValueError(f"Failed to calculate route for mode {new_mode.value}: {str(e)}")
+            
+        self._updated_at = datetime.utcnow()
+        self._add_event(ItineraryUpdatedEvent(
+            trip_id=self._id.value,
+            day_index=day_index
+        ))
+        
+        return result
+
     def update_day_itinerary(
         self, 
         day_index: int, 
