@@ -11,6 +11,7 @@ from app_travel.infrastructure.external_service.gaode_geo_service_impl import Ga
 from app_travel.services.travel_service import TravelService
 from app_travel.domain.aggregate.trip_aggregate import Trip
 from app_travel.domain.value_objects.itinerary_value_objects import TransitCalculationResult
+from app_travel.domain.value_objects.travel_value_objects import Location
 
 # 创建蓝图
 travel_bp = Blueprint('travel', __name__, url_prefix='/api/travel')
@@ -111,38 +112,48 @@ def serialize_trip(trip: Trip, detail: bool = True) -> dict:
 
 def serialize_trip_day(day) -> dict:
     """序列化 TripDay"""
-    # 查找当天的第一个活动，作为地图的初始中心
-    initial_center = None
-    
     # 实例化高德服务 (注意：频繁实例化可能有性能损耗，但在 View 层简单处理即可)
     geo_service = GaodeGeoServiceImpl()
 
+    # 预处理：确保所有活动都有坐标
+    # 满足用户需求：计算当前旅行日的每一个活动地点的经纬度
     if day.activities:
         for activity in day.activities:
-            # 1. 优先使用数据库中已有的坐标
-            if (activity.location.latitude is not None and 
+            # 检查是否有有效坐标
+            has_coords = (
+                activity.location.latitude is not None and 
                 activity.location.longitude is not None and
                 # 排除 0,0 这种无效坐标
                 abs(float(activity.location.latitude)) > 0.000001 and
-                abs(float(activity.location.longitude)) > 0.000001):
-                initial_center = [float(activity.location.longitude), float(activity.location.latitude)]
-                break
+                abs(float(activity.location.longitude)) > 0.000001
+            )
             
-            # 2. 如果没有坐标，调用高德服务进行地理编码
-            # 满足用户需求：调用 GaodeGeoServiceImpl 服务算出经纬度
-            location_name = activity.location.name or activity.location.address
-            if location_name:
-                try:
-                    # 调用 geocode 获取坐标
-                    loc = geo_service.geocode(location_name)
-                    if loc and loc.has_coordinates():
-                        initial_center = [loc.longitude, loc.latitude]
-                        # 可以在这里选择是否回写数据库，但 View 层一般只读。
-                        # 为了性能，找到一个能用的中心点就退出
-                        break
-                except Exception as e:
-                    print(f"Failed to geocode for initial center: {e}")
-                    continue
+            if not has_coords:
+                location_name = activity.location.name or activity.location.address
+                if location_name:
+                    try:
+                        # 调用 geocode 获取坐标
+                        loc = geo_service.geocode(location_name)
+                        if loc and loc.has_coordinates():
+                            # 更新内存中的 Activity 对象
+                            # 注意：Activity.location 是 Location 值对象 (frozen)，需要替换
+                            activity.location = Location(
+                                name=activity.location.name,
+                                latitude=loc.latitude,
+                                longitude=loc.longitude,
+                                address=loc.address or activity.location.address
+                            )
+                    except Exception as e:
+                        print(f"Failed to geocode activity {activity.name}: {e}")
+
+    # 查找当天的第一个活动，作为地图的初始中心
+    initial_center = None
+    if day.activities:
+        for activity in day.activities:
+            if (activity.location.latitude is not None and 
+                activity.location.longitude is not None):
+                 initial_center = [float(activity.location.longitude), float(activity.location.latitude)]
+                 break
 
     return {
         'day_index': day.day_number - 1, # 0-based

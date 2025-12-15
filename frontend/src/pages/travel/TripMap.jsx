@@ -175,7 +175,7 @@ const TripMap = ({ activities = [], transits = [], initialCenter }) => {
                             key={`marker-${idx}`}
                             position={marker.position}
                             title={marker.title}
-                            offset={new window.AMap.Pixel(-14, -14)} // 中心对齐调整 (28px/2)
+                            offset={window.AMap ? new window.AMap.Pixel(-14, -14) : [-14, -14]} // 中心对齐调整 (28px/2)
                         >
                             <div style={{
                                 position: 'relative',
