@@ -23,8 +23,11 @@ export default defineConfig({
   reporter: 'html',
   use: {
     actionTimeout: 0,
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:55555',
     trace: 'on-first-retry',
+    launchOptions: {
+      args: ['--enable-unsafe-swiftshader', '--use-gl=egl']
+    }
   },
   projects: [
     {
@@ -32,10 +35,9 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: 'npx vite --port 45678 --strictPort',
-    port: 45678,
-    reuseExistingServer: false,
-    timeout: 120 * 1000,
-  },
+  // webServer: {
+  //   command: 'npx vite --port 55555',
+  //   port: 55555,
+  //   reuseExistingServer: true,
+  // },
 });

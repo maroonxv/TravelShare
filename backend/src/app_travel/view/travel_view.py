@@ -46,8 +46,14 @@ from app_auth.infrastructure.database.persistent_model.user_po import UserPO
 
 # ==================== 序列化辅助函数 ====================
 
-def serialize_trip(trip: Trip) -> dict:
-    """将 Trip 聚合根序列化为字典"""
+def serialize_trip(trip: Trip, detail: bool = True) -> dict:
+    """将 Trip 聚合根序列化为字典
+    
+    Args:
+        trip: Trip 对象
+        detail: 是否包含详细的日程（days/activities）信息。
+                列表页建议设为 False 以提高性能。
+    """
     
     # 批量获取用户信息以展示头像和用户名
     members_data = []
@@ -73,7 +79,7 @@ def serialize_trip(trip: Trip) -> dict:
                 'avatar_url': user.avatar_url if user else None
             })
 
-    return {
+    result = {
         'id': trip.id.value,
         'name': trip.name.value,
         'description': trip.description.value,
@@ -93,13 +99,51 @@ def serialize_trip(trip: Trip) -> dict:
         'updated_at': trip.updated_at.isoformat(),
         'member_count': len(trip.members), # Helper count
         'members': members_data,
-        'days': [
-            serialize_trip_day(day) for day in trip.days
-        ]
     }
+
+    if detail:
+        result['days'] = [serialize_trip_day(day) for day in trip.days]
+    else:
+        # 列表页不需要详细的日程信息，返回空列表或摘要
+        result['days'] = []
+        
+    return result
 
 def serialize_trip_day(day) -> dict:
     """序列化 TripDay"""
+    # 查找当天的第一个活动，作为地图的初始中心
+    initial_center = None
+    
+    # 实例化高德服务 (注意：频繁实例化可能有性能损耗，但在 View 层简单处理即可)
+    geo_service = GaodeGeoServiceImpl()
+
+    if day.activities:
+        for activity in day.activities:
+            # 1. 优先使用数据库中已有的坐标
+            if (activity.location.latitude is not None and 
+                activity.location.longitude is not None and
+                # 排除 0,0 这种无效坐标
+                abs(float(activity.location.latitude)) > 0.000001 and
+                abs(float(activity.location.longitude)) > 0.000001):
+                initial_center = [float(activity.location.longitude), float(activity.location.latitude)]
+                break
+            
+            # 2. 如果没有坐标，调用高德服务进行地理编码
+            # 满足用户需求：调用 GaodeGeoServiceImpl 服务算出经纬度
+            location_name = activity.location.name or activity.location.address
+            if location_name:
+                try:
+                    # 调用 geocode 获取坐标
+                    loc = geo_service.geocode(location_name)
+                    if loc and loc.has_coordinates():
+                        initial_center = [loc.longitude, loc.latitude]
+                        # 可以在这里选择是否回写数据库，但 View 层一般只读。
+                        # 为了性能，找到一个能用的中心点就退出
+                        break
+                except Exception as e:
+                    print(f"Failed to geocode for initial center: {e}")
+                    continue
+
     return {
         'day_index': day.day_number - 1, # 0-based
         'day_number': day.day_number, # 1-based
@@ -108,7 +152,8 @@ def serialize_trip_day(day) -> dict:
         'theme': day.theme,
         'notes': day.notes,
         'activities': [serialize_activity(a) for a in day.activities],
-        'transits': [serialize_transit(t) for t in day.transits]
+        'transits': [serialize_transit(t) for t in day.transits],
+        'initial_center': initial_center # [lng, lat] or None
     }
 
 def serialize_activity(activity) -> dict:
@@ -310,7 +355,8 @@ def list_user_trips(user_id):
     service = get_travel_service()
     
     trips = service.list_user_trips(user_id, status)
-    return jsonify([serialize_trip(t) for t in trips])
+    # 列表页不需要详细的 days/activities 信息，避免触发昂贵的 geocoding
+    return jsonify([serialize_trip(t, detail=False) for t in trips])
 
 @travel_bp.route('/trips/public', methods=['GET'])
 def list_public_trips():
@@ -321,7 +367,8 @@ def list_public_trips():
     service = get_travel_service()
     
     trips = service.list_public_trips(limit, offset, search_query)
-    return jsonify([serialize_trip(t) for t in trips])
+    # 列表页同样不需要详细信息
+    return jsonify([serialize_trip(t, detail=False) for t in trips])
 
 @travel_bp.route('/trips/<trip_id>/members/<user_id>', methods=['DELETE'])
 def remove_member(trip_id, user_id):

@@ -297,6 +297,7 @@ const TripDetailPage = () => {
                          <TripMap 
                              activities={currentDay.activities || []} 
                              transits={currentDay.transits || []}
+                             initialCenter={currentDay.initial_center}
                          />
                      ) : (
                          <div style={{ padding: '2rem', textAlign: 'center', background: '#f8fafc', borderRadius: '0.5rem', color: '#64748b' }}>

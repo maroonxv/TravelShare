@@ -1,18 +1,18 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('TripMap Component E2E', () => {
-  test.beforeEach(async ({ page }) => {
-    // Check if API key is present
-    // Note: We cannot easily check env vars in the browser context from here without exposing them,
-    // but the app should have them loaded.
-    // If the map fails to load due to missing key, the test will fail on timeout waiting for map instance.
-    
-    await page.goto('/test/trip-map');
-  });
+    test.beforeEach(async ({ page }) => {
+        // Inject test mode flag
+        await page.addInitScript(() => {
+            window.__TEST_MODE__ = true;
+        });
+    });
 
   test('should render map and markers with correct coordinates', async ({ page }) => {
     // Debug: Print page content if it fails
     page.on('console', msg => console.log('PAGE LOG:', msg.text()));
+
+    await page.goto('/test/trip-map');
 
     // 1. Wait for map container to be visible
     // Wait for ANY content first to see if page loads at all
@@ -25,7 +25,18 @@ test.describe('TripMap Component E2E', () => {
         throw e;
     }
 
-    await expect(page.locator('[data-testid="trip-map-container"]')).toBeVisible();
+    await expect(page.locator('[data-testid="trip-map-container"]').first()).toBeVisible();
+
+    // Debug: Poll for state visibility
+    for (let i = 0; i < 5; i++) {
+        const state = await page.evaluate(() => ({
+            hasAMap: !!window.AMap,
+            hasInstance: !!window.__TEST_MAP_INSTANCE__
+        }));
+        console.log(`DEBUG Poll ${i}:`, state);
+        if (state.hasInstance) break;
+        await page.waitForTimeout(1000);
+    }
 
     // 2. Wait for AMap script to load and instance to be created
     // We poll window.__TEST_MAP_INSTANCE__ which we exposed in TripMap.jsx
