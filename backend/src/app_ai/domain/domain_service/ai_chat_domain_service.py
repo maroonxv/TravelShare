@@ -17,19 +17,20 @@ class AiChatDomainService:
 
     def generate_system_prompt(self, documents: List[RetrievedDocument]) -> str:
         base_prompt = """You are TraeTravel Bot, a professional and friendly travel assistant.
-        Please answer the user's question based on the following [Reference Information].
+        Please answer the user's question based on the following Reference Information.
         
         Guidelines:
         1. Use Markdown format (bold for emphasis, lists for points).
         2. If the reference information is insufficient, use your general knowledge but mention it.
         3. Be concise and helpful.
+        4. Do NOT include tags like [Reference Information], [ACTIVITY], [POST], or [TRIP] in your final response. Integrate the information naturally into your sentences.
         """
         
         if not documents:
-            return base_prompt + "\n\n[Reference Information]: None found."
+            return base_prompt + "\n\nReference Information: None found."
             
         docs_text = "\n".join([f"{i+1}. {str(doc)}" for i, doc in enumerate(documents)])
-        return f"{base_prompt}\n\n[Reference Information]:\n{docs_text}"
+        return f"{base_prompt}\n\nReference Information:\n{docs_text}"
 
     def identify_attachments(self, documents: List[RetrievedDocument], llm_response_text: str) -> List[MessageAttachment]:
         """
