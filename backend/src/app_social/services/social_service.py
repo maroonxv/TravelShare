@@ -787,9 +787,28 @@ class SocialService:
                 session.commit()
             
             messages = conv.get_recent_messages(limit)
+            
+            # Enrich with sender info
+            sender_ids = set(m.sender_id for m in messages)
+            user_info_map = {}
+            if sender_ids:
+                try:
+                    user_dao = SqlAlchemyUserDao(session)
+                    user_repo = UserRepositoryImpl(user_dao)
+                    users = user_repo.find_by_ids([UserId(uid) for uid in sender_ids])
+                    for u in users:
+                        user_info_map[u.id.value] = {
+                            "name": u.username.value,
+                            "avatar": u.profile.avatar_url
+                        }
+                except Exception as e:
+                    print(f"Error fetching message senders info: {e}")
+
             return [{
                 "id": m.message_id,
                 "sender_id": m.sender_id,
+                "sender_name": user_info_map.get(m.sender_id, {}).get("name"),
+                "sender_avatar": user_info_map.get(m.sender_id, {}).get("avatar"),
                 "content": m.content.text,
                 "type": m.content.message_type,
                 "media_url": m.content.media_url,

@@ -203,10 +203,40 @@
     display: flex;
     width: 100%;
     margin-bottom: 2px;
+    align-items: flex-end; /* Align avatar to bottom */
 }
 
 .messageRow.me {
     justify-content: flex-end;
+}
+
+.avatarContainer {
+    width: 32px;
+    height: 32px;
+    margin-right: 8px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.msgAvatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.avatarPlaceholder {
+    width: 32px;
+}
+
+.senderName {
+    font-size: 0.75rem;
+    color: var(--color-accent);
+    margin-bottom: 4px;
+    font-weight: 600;
 }
 
 .messageBubble {

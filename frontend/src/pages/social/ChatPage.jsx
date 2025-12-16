@@ -439,9 +439,9 @@ const ChatPage = () => {
 
                         <div className={styles.messages}>
                             {messages.map((msg, index) => {
-                                const isMe = msg.sender_id === user?.id;
+                                const isMe = msg.sender_id === user.id;
                                 const prevMsg = messages[index - 1];
-                                const isChain = prevMsg && prevMsg.sender_id === msg.sender_id;
+                                const isChain = prevMsg && prevMsg.sender_id === msg.sender_id && (new Date(msg.sent_at) - new Date(prevMsg.sent_at) < 5 * 60 * 1000);
                                 
                                 return (
                                     <div 
@@ -449,7 +449,26 @@ const ChatPage = () => {
                                         className={`${styles.messageRow} ${isMe ? styles.me : ''}`}
                                         data-chain={!isChain ? "first" : ""}
                                     >
+                                        {!isMe && (
+                                            <div className={styles.avatarContainer}>
+                                                {!isChain ? (
+                                                    msg.sender_avatar ? (
+                                                        <img src={msg.sender_avatar} className={styles.msgAvatar} alt={msg.sender_name} title={msg.sender_name} />
+                                                    ) : (
+                                                        <div className={styles.msgAvatar} style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                                                            <User size={16} />
+                                                        </div>
+                                                    )
+                                                ) : (
+                                                     <div className={styles.avatarPlaceholder} />
+                                                )}
+                                            </div>
+                                        )}
+
                                         <div className={styles.messageBubble}>
+                                            {!isMe && !isChain && activeConv?.type === 'group' && (
+                                                <div className={styles.senderName}>{msg.sender_name || 'Unknown'}</div>
+                                            )}
                                             {msg.type === 'image' ? (
                                                 <div className={styles.imageMessage}>
                                                     <img src={msg.media_url} alt="Shared" className={styles.msgImage} />
