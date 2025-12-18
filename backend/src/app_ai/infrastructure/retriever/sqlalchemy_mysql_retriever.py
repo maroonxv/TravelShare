@@ -1,5 +1,6 @@
 from typing import List
 import string
+import jieba
 from sqlalchemy import or_, literal, func
 from sqlalchemy.orm import Session
 from app_ai.domain.demand_interface.i_retriever import IRetriever
@@ -18,9 +19,22 @@ class SqlAlchemyMysqlRetriever(IRetriever):
         # Clean punctuation and split query into keywords
         # Relaxed length constraint to >= 2 to support short words (especially Chinese)
         query_clean = query.translate(str.maketrans('', '', string.punctuation))
-        keywords = [w for w in query_clean.split() if len(w) >= 2]
+        query_clean = query_clean.strip()
+        if any('\u4e00' <= c <= '\u9fff' for c in query_clean):
+            seg_list = jieba.cut_for_search(query_clean)
+            keywords = [query_clean]
+            seen = {query_clean}
+            for w in seg_list:
+                w = w.strip()
+                if len(w) < 2 or w in seen:
+                    continue
+                seen.add(w)
+                keywords.append(w)
+        else:
+            keywords = [w for w in query_clean.split() if len(w) >= 2]
+
         if not keywords:
-             keywords = [query]
+            keywords = [query.strip()]
 
         # Activity Filters
         activity_filters = []
