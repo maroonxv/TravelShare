@@ -12,10 +12,13 @@ class GaodeGeoServiceImpl(IGeoService):
 
     def geocode(self, address: str) -> Optional[Location]:
         """地址转坐标（地理编码）"""
+        if not address or not address.strip():
+            return None
+            
         url = f"{self.base_url}/geocode/geo"
         params = {
             "key": self.api_key,
-            "address": address,
+            "address": address.strip(),
             "output": "json"
         }
         try:
@@ -235,27 +238,40 @@ class GaodeGeoServiceImpl(IGeoService):
                      duration = float(p.get("duration", 0))
                 
                 # 提取 Polyline
-                # v5 接口: 需要 show_fields=polyline 并在 steps/segments 中或者外层获取
-                # 简化处理：这里暂不深度拼接 polyline，除非前端强需求
-                # 如果 API 直接返回了 polyline (如 transit 的某些情况或 driving 的某些情况)，则使用
-                # 注意：v5 文档显示 polyline 可能在 steps 中，需要拼接
-                polyline = ""
+                # v5 接口: 需要从 steps/segments 中拼接
+                polyline_parts = []
+                
+                if mode == "transit":
+                    segments = p.get("segments", [])
+                    for segment in segments:
+                        # 公交部分
+                        if "bus" in segment and "buslines" in segment["bus"]:
+                            for busline in segment["bus"]["buslines"]:
+                                if "polyline" in busline:
+                                    polyline_parts.append(busline["polyline"])
+                                    break # 通常只取第一条线路
+                        # 步行部分
+                        if "walking" in segment and "steps" in segment["walking"]:
+                            for step in segment["walking"]["steps"]:
+                                if "polyline" in step:
+                                    polyline_parts.append(step["polyline"])
+                        # 铁路/其他 (如果需要支持更复杂的transit)
+                else:
+                    # driving, walking, bicycling
+                    steps = p.get("steps", [])
+                    for step in steps:
+                        if "polyline" in step:
+                            polyline_parts.append(step["polyline"])
+                            
+                # 拼接所有部分，高德 polyline 格式为 "lng,lat;lng,lat"，多段拼接需用 ";" 连接
+                polyline = ";".join(polyline_parts)
                 
                 path_info = {
                     "distance": distance,
                     "duration": duration,
-                    "steps": [],
+                    "steps": len(steps) if mode != "transit" else len(p.get("segments", [])),
                     "polyline": polyline 
                 }
-                
-                # 简化步骤信息
-                steps = []
-                if mode == "transit":
-                    steps = p.get("segments", [])
-                else:
-                    steps = p.get("steps", [])
-                    
-                path_info["steps"] = len(steps)
                 result["paths"].append(path_info)
                 
             return result

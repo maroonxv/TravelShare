@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@babel/runtime": "^7.28.4",
+    "@uiw/react-amap": "^7.1.13",
     "axios": "^1.13.2",
     "emoji-picker-react": "^4.16.1",
     "lucide-react": "^0.556.0",

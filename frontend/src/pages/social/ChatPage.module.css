@@ -203,10 +203,39 @@
     display: flex;
     width: 100%;
     margin-bottom: 2px;
+    gap: 8px;
+    align-items: flex-end;
 }
 
 .messageRow.me {
     justify-content: flex-end;
+}
+
+.msgAvatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-bottom: 2px;
+}
+
+.msgAvatarImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.msgAvatarFallback {
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 700;
 }
 
 .messageBubble {
@@ -515,6 +544,188 @@
 /* Emoji Picker */
 .emojiWrapper {
     position: relative;
+}
+
+.groupModal {
+    max-width: 620px;
+}
+
+.groupSection {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.groupSectionTitle {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.groupInviteRow {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.groupSelect {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    color: var(--text-primary);
+    outline: none;
+}
+
+.groupSelect:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.primaryActionBtn {
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.primaryActionBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.memberList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-lg);
+    padding: 10px;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.memberRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.memberLeft {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.memberAvatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+    flex-shrink: 0;
+}
+
+.memberAvatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.memberInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.memberName {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-primary);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.meBadge {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.25);
+    color: #86efac;
+    flex-shrink: 0;
+}
+
+.memberSub {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dangerActionBtn {
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    background: rgba(239, 68, 68, 0.12);
+    color: #fecaca;
+    cursor: pointer;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.dangerActionBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.memberLoading {
+    text-align: center;
+    padding: 10px 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.groupFooter {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.leaveBtn {
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    background: rgba(239, 68, 68, 0.12);
+    color: #fecaca;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.leaveBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .emojiPickerContainer {

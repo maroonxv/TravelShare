@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getTrip, updateTrip } from '../../api/travel';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import Button from '../../components/Button';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import AddActivityModal from './AddActivityModal';
@@ -10,17 +10,151 @@ import EditTransitModal from './EditTransitModal';
 import AddMemberModal from './AddMemberModal';
 import TripMembersModal from './TripMembersModal';
 import EditTripModal from './EditTripModal';
-import { Calendar, Users, DollarSign, MapPin, Clock, ArrowRight, ArrowLeft, Plus, Edit2 } from 'lucide-react';
+import { Calendar, Users, DollarSign, MapPin, Clock, ArrowRight, ArrowLeft, Plus, Edit2, Map as MapIcon, List as ListIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { Map, Marker, Polyline, APILoader } from '@uiw/react-amap';
 import styles from './TripDetail.module.css';
+
+// Debug component to check AMap status
+const AMapDebug = ({ markers, polylines }) => {
+    useEffect(() => {
+        console.log('[AMapDebug] Checking AMap global object:', window.AMap);
+        if (window.AMap) {
+            console.log('[AMapDebug] AMap version:', window.AMap.version || window.AMap.v);
+            
+            // Check Map instance
+            // Note: We can't easily access the map instance here unless passed via context or parent, 
+            // but we can check if markers/polylines data is valid
+            console.log('[AMapDebug] Markers Data:', markers);
+            console.log('[AMapDebug] Polylines Data:', polylines);
+
+            const invalidMarkers = markers.filter(m => !m.position || isNaN(m.position[0]) || isNaN(m.position[1]));
+            if (invalidMarkers.length > 0) {
+                console.error('[AMapDebug] Found invalid markers:', invalidMarkers);
+            }
+        } else {
+            console.warn('[AMapDebug] AMap object is missing!');
+        }
+    }, [markers, polylines]);
+    return null;
+};
+
+// Raw Map Initializer Component
+const RawMap = ({ center, markers, polylines }) => {
+    const mapContainerRef = React.useRef(null);
+    const mapInstanceRef = React.useRef(null);
+
+    useEffect(() => {
+        if (!window.AMap || !mapContainerRef.current) return;
+
+        console.log('[RawMap] Initializing map...');
+        
+        // Validate center
+        let validCenter = center;
+        if (!center || isNaN(center[0]) || isNaN(center[1])) {
+            console.warn('[RawMap] Invalid center provided:', center, 'Using default.');
+            validCenter = [116.397428, 39.90923];
+        }
+
+        try {
+            // Create Map Instance
+            const map = new window.AMap.Map(mapContainerRef.current, {
+                zoom: 13,
+                center: validCenter,
+                viewMode: '2D', // Try 2D mode explicitly
+            });
+            mapInstanceRef.current = map;
+            console.log('[RawMap] Map instance created:', map);
+
+            // Track valid overlays for fitView
+            const validOverlays = [];
+
+            // Add Markers
+            markers.forEach((m, i) => {
+                if (m.position && !isNaN(m.position[0]) && !isNaN(m.position[1])) {
+                    try {
+                        const marker = new window.AMap.Marker({
+                            position: m.position,
+                            title: m.title,
+                            label: m.label,
+                            map: map
+                        });
+                        validOverlays.push(marker);
+                    } catch (e) {
+                        console.error('[RawMap] Error creating marker:', m, e);
+                    }
+                } else {
+                    console.warn('[RawMap] Skipping invalid marker:', m);
+                }
+            });
+
+            // Add Polylines
+            polylines.forEach(p => {
+                const validPath = p.path.filter(pt => !isNaN(pt[0]) && !isNaN(pt[1]));
+                if (validPath.length > 1) {
+                    try {
+                        const polyline = new window.AMap.Polyline({
+                            path: validPath,
+                            strokeColor: p.style.strokeColor,
+                            strokeWeight: p.style.strokeWeight,
+                            strokeOpacity: p.style.strokeOpacity,
+                            showDir: true,
+                            map: map
+                        });
+                        validOverlays.push(polyline);
+                    } catch (e) {
+                        console.error('[RawMap] Error creating polyline:', p, e);
+                    }
+                } else {
+                    console.warn('[RawMap] Skipping invalid polyline:', p);
+                }
+            });
+            
+            // Only fit view if there are valid overlays
+            if (validOverlays.length > 0) {
+                try {
+                    console.log(`[RawMap] Fitting view for ${validOverlays.length} overlays.`);
+                    // Explicitly pass the overlays to setFitView to avoid it trying to calculate bounds for invalid ones
+                    map.setFitView(validOverlays); 
+                } catch(e) {
+                    console.error('[RawMap] setFitView failed:', e);
+                }
+            } else {
+                console.warn('[RawMap] No valid overlays to fit view.');
+            }
+
+        } catch (error) {
+            console.error('[RawMap] Error initializing map:', error);
+        }
+
+        return () => {
+            if (mapInstanceRef.current) {
+                console.log('[RawMap] Destroying map instance');
+                mapInstanceRef.current.destroy();
+                mapInstanceRef.current = null;
+            }
+        };
+    }, [center, markers, polylines]);
+
+    return <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />;
+};
 
 const TripDetailPage = () => {
     const { tripId: id } = useParams();
+    
+    // Debug Logs
+    useEffect(() => {
+        console.log('[TripDetailPage] Mounted');
+        console.log('[TripDetailPage] Env Key:', import.meta.env.VITE_AMAP_KEY ? 'Present' : 'Missing');
+        console.log('[TripDetailPage] Security Config:', window._AMapSecurityConfig);
+    }, []);
+
     const navigate = useNavigate();
     const { user } = useAuth();
     const [trip, setTrip] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeDayIdx, setActiveDayIdx] = useState(0);
+    const [viewMode, setViewMode] = useState('timeline'); // 'timeline' or 'map'
     const [showAddModal, setShowAddModal] = useState(false);
     const [showAddMemberModal, setShowAddMemberModal] = useState(false);
     const [showMembersListModal, setShowMembersListModal] = useState(false);
@@ -29,11 +163,7 @@ const TripDetailPage = () => {
     const [editingActivity, setEditingActivity] = useState(null);
     const [editingTransit, setEditingTransit] = useState(null);
 
-    useEffect(() => {
-        fetchTrip();
-    }, [id]);
-
-    const fetchTrip = async () => {
+    const fetchTrip = useCallback(async () => {
         try {
             const data = await getTrip(id);
             setTrip(data);
@@ -43,7 +173,11 @@ const TripDetailPage = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id]);
+
+    useEffect(() => {
+        fetchTrip();
+    }, [fetchTrip]);
 
     const handleStatusChange = async (newStatus) => {
         try {
@@ -64,7 +198,7 @@ const TripDetailPage = () => {
     const currentDay = days[activeDayIdx];
 
     // Helper to format currency
-    const fmtMoney = (amount) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    const fmtMoney = (amount) => new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY' }).format(amount);
 
     const currentUserMember = trip.members?.find(m => m.user_id === user?.id);
     const isCurrentUserAdmin = user?.id === trip.creator_id || currentUserMember?.role === 'admin' || currentUserMember?.role === 'owner';
@@ -99,6 +233,45 @@ const TripDetailPage = () => {
     }, 0) || 0;
 
     const isOverBudget = totalCost > (trip.budget_amount || 0);
+
+    // Map Data Preparation
+    const mapMarkers = currentDay?.activities?.map((act, i) => {
+        // Ensure coordinates are numbers
+        const lng = parseFloat(act.location?.longitude);
+        const lat = parseFloat(act.location?.latitude);
+        
+        if (isNaN(lng) || isNaN(lat)) {
+            console.warn(`[TripDetail] Invalid coordinates for activity ${act.name}:`, act.location);
+            return null;
+        }
+
+        return {
+            position: [lng, lat],
+            title: `${i + 1}. ${act.name}`,
+            label: { content: act.name, direction: 'top' }
+        };
+    }).filter(Boolean) || [];
+
+    const mapPolylines = currentDay?.transits?.map(t => {
+        if (!t.polyline) return null;
+        const path = t.polyline.split(';').map(p => {
+            const [lngStr, latStr] = p.split(',');
+            const lng = parseFloat(lngStr);
+            const lat = parseFloat(latStr);
+            if (isNaN(lng) || isNaN(lat)) return null;
+            return [lng, lat];
+        }).filter(Boolean); // Filter out invalid points in path
+
+        if (path.length < 2) return null;
+
+        return {
+            path,
+            style: { strokeColor: '#F5222D', strokeWeight: 6, strokeOpacity: 0.8 }
+        };
+    }).filter(Boolean) || [];
+
+    // Ensure mapCenter is valid
+    const mapCenter = mapMarkers.length > 0 ? mapMarkers[0].position : [116.397428, 39.90923];
 
     return (
         <div className={styles.container}>
@@ -233,21 +406,69 @@ const TripDetailPage = () => {
                 </div>
             </div>
 
-            {/* Day Tabs */}
-            <div className={styles.tabs}>
-                {days.map((day, idx) => (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+                {/* Day Tabs */}
+                <div className={styles.tabs} style={{ margin: 0 }}>
+                    {days.map((day, idx) => (
+                        <button
+                            key={idx}
+                            className={`${styles.tab} ${activeDayIdx === idx ? styles.activeTab : ''}`}
+                            onClick={() => setActiveDayIdx(idx)}
+                        >
+                            第 {idx + 1} 天
+                        </button>
+                    ))}
+                </div>
+
+                {/* View Mode Toggle */}
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button
-                        key={idx}
-                        className={`${styles.tab} ${activeDayIdx === idx ? styles.activeTab : ''}`}
-                        onClick={() => setActiveDayIdx(idx)}
+                        onClick={() => setViewMode('timeline')}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            background: viewMode === 'timeline' ? '#0f172a' : 'rgba(255,255,255,0.05)',
+                            color: viewMode === 'timeline' ? 'white' : '#94a3b8',
+                            border: '1px solid #334155',
+                            borderRadius: '0.375rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            fontSize: '0.9rem'
+                        }}
                     >
-                        第 {idx + 1} 天
+                        <ListIcon size={16} /> 列表
                     </button>
-                ))}
+                    <button
+                        onClick={() => setViewMode('map')}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            background: viewMode === 'map' ? '#0f172a' : 'rgba(255,255,255,0.05)',
+                            color: viewMode === 'map' ? 'white' : '#94a3b8',
+                            border: '1px solid #334155',
+                            borderRadius: '0.375rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            fontSize: '0.9rem'
+                        }}
+                    >
+                        <MapIcon size={16} /> 地图
+                    </button>
+                </div>
             </div>
 
-            {/* Timeline View */}
-            <div className={styles.timeline}>
+            {viewMode === 'map' ? (
+                <div style={{ height: '600px', width: '100%', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid #334155', marginBottom: '2rem', position: 'relative' }}>
+                    <APILoader akey={import.meta.env.VITE_AMAP_KEY} version="2.0">
+                        <AMapDebug markers={mapMarkers} polylines={mapPolylines} />
+                        <RawMap center={mapCenter} markers={mapMarkers} polylines={mapPolylines} />
+                    </APILoader>
+                </div>
+            ) : (
+                /* Timeline View */
+                <div className={styles.timeline}>
                 {currentDay && (
                     <>
                         {/* Activities */}
@@ -261,16 +482,16 @@ const TripDetailPage = () => {
                                     <div key={`act-${idx}`}>
                                         {/* Activity Item */}
                                         <div className={styles.timelineItem}>
-                                            <div className={styles.timelineParams}>
-                                                <span className={styles.time} style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
+                                            <div className={styles.timelineParams} style={{ flexDirection: 'column' }}>
+                                                <span className={styles.time} style={{ fontSize: '1rem', fontWeight: 'bold', lineHeight: '1.2' }}>
                                                     {activity.start_time?.slice(0, 5)}
                                                 </span>
-                                                <span className={styles.time} style={{ fontSize: '0.9rem', color: '#64748b' }}>
-                                                    - {activity.end_time?.slice(0, 5)}
+                                                <span className={styles.time} style={{ fontSize: '0.9rem', color: '#64748b', lineHeight: '1.2' }}>
+                                                    {activity.end_time?.slice(0, 5)}
                                                 </span>
                                                 {isTimeConflict && (
                                                     <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.25rem' }}>
-                                                        时间冲突
+                                                        冲突
                                                     </div>
                                                 )}
                                             </div>
@@ -287,7 +508,7 @@ const TripDetailPage = () => {
                                                     {activity.location_name}
                                                 </div>
                                                 <div className={styles.cost}>
-                                                    {fmtMoney(activity.cost)}
+                                                    {fmtMoney(activity.cost?.amount || 0)}
                                                 </div>
                                             </div>
                                         </div>
@@ -363,6 +584,7 @@ const TripDetailPage = () => {
                     </div>
                 )}
             </div>
+            )}
 
             {showAddModal && (
                 <AddActivityModal

@@ -1,9 +1,6 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import client from '../api/client';
-
-const AuthContext = createContext(null);
-
-export const useAuth = () => useContext(AuthContext);
+import AuthContext from './AuthContextInternal';
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
@@ -17,7 +14,7 @@ export const AuthProvider = ({ children }) => {
         try {
             const { data } = await client.get('/auth/me');
             setUser(data);
-        } catch (error) {
+        } catch {
             setUser(null);
         } finally {
             setLoading(false);

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { resources } from '../config/resources';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import styles from './AdminLayout.module.css';
 import { 
     Users, Map, FileText, MessageSquare, Heart, 

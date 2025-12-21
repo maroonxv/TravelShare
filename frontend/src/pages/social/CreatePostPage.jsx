@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { createPost } from '../../api/social';
 import { getUserTrips } from '../../api/travel';
 import Button from '../../components/Button';
@@ -18,22 +18,19 @@ const CreatePostPage = () => {
     const [content, setContent] = useState('');
     const [tags, setTags] = useState('');
     const [selectedTrip, setSelectedTrip] = useState('');
-    const [visibility, setVisibility] = useState('public');
+    const [visibility, _setVisibility] = useState('public');
     const [images, setImages] = useState([]);
     const [previews, setPreviews] = useState([]);
     const [myTrips, setMyTrips] = useState([]);
     const [loading, setLoading] = useState(false);
+    const previewsRef = useRef(previews);
 
     useEffect(() => {
-        if (user) {
-            fetchTrips();
-        }
-        return () => {
-            previews.forEach(url => URL.revokeObjectURL(url));
-        };
-    }, [user]);
+        previewsRef.current = previews;
+    }, [previews]);
 
-    const fetchTrips = async () => {
+    const fetchTrips = useCallback(async () => {
+        if (!user?.id) return;
         try {
             const trips = await getUserTrips(user.id);
             setMyTrips(Array.isArray(trips) ? trips : (trips.trips || []));
@@ -41,7 +38,16 @@ const CreatePostPage = () => {
             console.error("Failed to load trips", error);
             toast.error("加载旅行列表失败");
         }
-    };
+    }, [user?.id]);
+
+    useEffect(() => {
+        if (user) {
+            fetchTrips();
+        }
+        return () => {
+            previewsRef.current.forEach(url => URL.revokeObjectURL(url));
+        };
+    }, [fetchTrips, user]);
 
     const handleImageChange = (e) => {
         const files = Array.from(e.target.files);

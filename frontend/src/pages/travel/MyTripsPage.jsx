@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getUserTrips } from '../../api/travel';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import TripCard from '../../components/TripCard';
 import Button from '../../components/Button';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -14,11 +14,8 @@ const MyTripsPage = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
 
-    useEffect(() => {
-        if (user) loadTrips();
-    }, [user]);
-
-    const loadTrips = async () => {
+    const loadTrips = useCallback(async () => {
+        if (!user?.id) return;
         try {
             const data = await getUserTrips(user.id);
             setTrips(Array.isArray(data) ? data : (data.trips || []));
@@ -27,7 +24,11 @@ const MyTripsPage = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user?.id]);
+
+    useEffect(() => {
+        if (user) loadTrips();
+    }, [loadTrips, user]);
 
     return (
         <div>

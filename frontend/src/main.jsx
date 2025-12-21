@@ -4,6 +4,11 @@ import './styles/theme.css'
 import './index.css'
 import App from './App.jsx'
 
+// Initialize AMap Security Config globally
+window._AMapSecurityConfig = {
+    securityJsCode: import.meta.env.VITE_AMAP_SECURITY_CODE,
+};
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />

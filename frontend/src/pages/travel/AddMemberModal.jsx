@@ -84,7 +84,7 @@ const AddMemberModal = ({ tripId, onClose, onSuccess, isOpen = true }) => {
                         <option value="">-- 选择好友 --</option>
                         {friends.map(friend => (
                             <option key={friend.id} value={friend.id}>
-                                {friend.username} ({friend.nickname || '无昵称'})
+                                {friend.username}
                             </option>
                         ))}
                     </select>

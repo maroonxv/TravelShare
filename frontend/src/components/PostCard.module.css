@@ -75,6 +75,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
+    z-index: 10;
 }
 
 /* 无图占位 */
@@ -158,43 +159,23 @@
     background: none;
     border: none;
     color: var(--color-social);
-    cursor: pointer;
     padding: 0;
-    font-size: 0.9rem;
     margin-top: 4px;
-}
-
-.tripLink {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.25rem 0.5rem;
-    background-color: rgba(249, 115, 22, 0.1);
-    color: var(--color-travel);
-    border-radius: var(--radius-sm);
-    font-size: 0.8rem;
-    margin-top: var(--spacing-sm);
-}
-
-.tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: var(--spacing-sm);
-}
-
-.tag {
-    color: var(--color-social);
     font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 500;
 }
 
-/* 底部互动栏 */
+.expandBtn:hover {
+    text-decoration: underline;
+}
+
 .actions {
     display: flex;
-    gap: 0; /* 使用 justify-content 分布 */
-    margin-top: var(--spacing-xs);
-    border-top: 1px solid rgba(255, 255, 255, 0.05); /* 极淡的分割线 */
+    border-top: 1px solid var(--border-color);
     padding-top: var(--spacing-sm);
+    margin-top: auto; /* 底部对齐 */
+    gap: var(--spacing-sm);
 }
 
 .actionBtn {
@@ -216,4 +197,49 @@
 .actionBtn:hover {
     color: var(--color-social);
     background-color: rgba(255, 255, 255, 0.05);
+}
+
+.liked {
+    color: #ef4444; /* red-500 */
+}
+
+.liked:hover {
+    color: #dc2626; /* red-600 */
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* 导航按钮 */
+.navBtn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.4);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s, opacity 0.2s;
+    opacity: 0; /* 默认隐藏 */
+    z-index: 20;
+}
+
+.mediaArea:hover .navBtn {
+    opacity: 1;
+}
+
+.navBtn:hover {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.navBtnPrev {
+    left: 8px;
+}
+
+.navBtnNext {
+    right: 8px;
 }

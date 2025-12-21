@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getPost, addComment, getComments } from '../../api/social';
+import { getPost, addComment } from '../../api/social';
 import PostCard from '../../components/PostCard';
 import Input from '../../components/Input';
 import Button from '../../components/Button';

@@ -129,6 +129,16 @@ export const createGroupChat = async (title, participantIds) => {
     return response.data;
 };
 
+export const addGroupParticipant = async (conversationId, userId) => {
+    const response = await client.post(`/social/conversations/${conversationId}/participants`, { user_id: userId });
+    return response.data;
+};
+
+export const removeGroupParticipant = async (conversationId, targetUserId) => {
+    const response = await client.delete(`/social/conversations/${conversationId}/participants/${targetUserId}`);
+    return response.data;
+};
+
 export const searchUsers = async (query) => {
     const response = await client.get(`/auth/users?search=${encodeURIComponent(query)}`);
     return response.data;

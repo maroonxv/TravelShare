@@ -12,6 +12,7 @@ from app_auth.infrastructure.database.persistent_model.user_po import UserPO
 from app_social.infrastructure.database.persistent_model.post_po import PostPO, CommentPO, LikePO
 from app_social.infrastructure.database.persistent_model.conversation_po import ConversationPO
 from app_social.infrastructure.database.persistent_model.message_po import MessagePO
+from app_social.infrastructure.database.po.friendship_po import FriendshipPO
 # Travel
 from app_travel.infrastructure.database.persistent_model.trip_po import TripPO, TripMemberPO, TripDayPO, ActivityPO, TransitPO
 from app_travel.view.travel_view import travel_bp

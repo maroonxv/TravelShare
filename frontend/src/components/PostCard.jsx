@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, MapPin, Trash2, Share2, Image as ImageIcon, FileText } from 'lucide-react';
+import { Heart, MessageCircle, MapPin, Trash2, Share2, Image as ImageIcon, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import Card from './Card';
 import styles from './PostCard.module.css';
 import { likePost, deletePost } from '../api/social';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import ShareModal from '../pages/social/ShareModal';
 import { toast } from 'react-hot-toast';
 
@@ -16,6 +16,17 @@ const PostCard = ({ post, onDelete }) => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    const handlePrevImage = (e) => {
+        e.stopPropagation();
+        setCurrentImageIndex(prev => (prev === 0 ? post.media_urls.length - 1 : prev - 1));
+    };
+
+    const handleNextImage = (e) => {
+        e.stopPropagation();
+        setCurrentImageIndex(prev => (prev === post.media_urls.length - 1 ? 0 : prev + 1));
+    };
 
     const handleLike = async () => {
         try {
@@ -58,12 +69,32 @@ const PostCard = ({ post, onDelete }) => {
         if (hasMedia) {
             return (
                 <div className={styles.mediaArea} onClick={handleImageClick} style={{ cursor: 'pointer' }}>
-                    <img src={post.media_urls[0]} alt="Post Cover" className={styles.mediaCover} />
+                    <img 
+                        src={post.media_urls[currentImageIndex]} 
+                        alt={`Post Image ${currentImageIndex + 1}`} 
+                        className={styles.mediaCover} 
+                    />
                     {post.media_urls.length > 1 && (
-                        <div className={styles.imageBadge}>
-                            <ImageIcon size={12} />
-                            <span>{post.media_urls.length}</span>
-                        </div>
+                        <>
+                            <button 
+                                className={`${styles.navBtn} ${styles.navBtnPrev}`} 
+                                onClick={handlePrevImage}
+                                title="上一张"
+                            >
+                                <ChevronLeft size={24} />
+                            </button>
+                            <button 
+                                className={`${styles.navBtn} ${styles.navBtnNext}`} 
+                                onClick={handleNextImage}
+                                title="下一张"
+                            >
+                                <ChevronRight size={24} />
+                            </button>
+                            <div className={styles.imageBadge}>
+                                <ImageIcon size={12} />
+                                <span>{currentImageIndex + 1}/{post.media_urls.length}</span>
+                            </div>
+                        </>
                     )}
                 </div>
             );

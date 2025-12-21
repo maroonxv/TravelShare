@@ -33,8 +33,10 @@ class Conversation:
         last_message_at: Optional[datetime] = None,
         title: Optional[str] = None  # 群聊标题
     ):
-        if len(participants) < 2:
-            raise ValueError("Conversation requires at least 2 participants")
+        # 移除强制至少2人的校验，因为在 reconstitute 时可能由于数据迁移或异常导致人数不足
+        # 但如果是新创建，create_private/create_group 工厂方法会进行校验
+        # if len(participants) < 2:
+        #     raise ValueError("Conversation requires at least 2 participants")
         
         self._id = conversation_id
         self._participants = participants # Dict[user_id, Role]

@@ -1,16 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import styles from './AdminPage.module.css';
 
 const GenericForm = ({ fields, initialData, onSubmit, onCancel }) => {
-    const [formData, setFormData] = useState({});
-
-    useEffect(() => {
-        if (initialData) {
-            setFormData(initialData);
-        } else {
-            setFormData({});
-        }
-    }, [initialData]);
+    const [formData, setFormData] = useState(() => initialData || {});
 
     const handleChange = (e) => {
         const { name, value } = e.target;

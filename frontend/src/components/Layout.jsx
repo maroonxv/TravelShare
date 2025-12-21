@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { Home, Globe, Map, User, LogOut, MessageSquare, ChevronLeft, ChevronRight, Bot } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import styles from './Layout.module.css';
 
 const Layout = () => {

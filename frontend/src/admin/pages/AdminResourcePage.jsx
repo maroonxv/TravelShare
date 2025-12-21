@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { resources } from '../config/resources';
 import * as api from '../../api/admin';
@@ -15,15 +15,12 @@ const AdminResourcePage = () => {
     const [editingItem, setEditingItem] = useState(null);
     const [showForm, setShowForm] = useState(false);
 
-    useEffect(() => {
-        loadData();
-    }, [resourceName]);
-
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         if (!config) return;
         setLoading(true);
         try {
-            const res = await api.getList(resourceName);
+            // 获取所有数据（通过设置较大的每页数量）
+            const res = await api.getList(resourceName, { per_page: 10000 });
             setData(res.data || []);
         } catch (err) {
             console.error(err);
@@ -31,7 +28,11 @@ const AdminResourcePage = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [config, resourceName]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     const handleCreate = () => {
         setEditingItem(null);
@@ -99,6 +100,7 @@ const AdminResourcePage = () => {
                 <GenericForm 
                     fields={config.fields} 
                     initialData={editingItem} 
+                    key={editingItem?.id || 'new'}
                     onSubmit={handleSubmit} 
                     onCancel={() => setShowForm(false)} 
                 />

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import EmojiPicker from 'emoji-picker-react';
@@ -10,13 +10,17 @@ import {
     acceptFriendRequest, 
     rejectFriendRequest,
     getFriends,
-    createConversation
+    createConversation,
+    getUserProfile,
+    addGroupParticipant,
+    removeGroupParticipant
 } from '../../api/social';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { Send, User, Check, X, MessageSquare, ArrowLeft, Smile, Plus, Users, UserPlus, Image as ImageIcon } from 'lucide-react';
 import AddFriendModal from './AddFriendModal';
 import CreateGroupModal from './CreateGroupModal';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import Modal from '../../components/Modal';
 import toast from 'react-hot-toast';
 import styles from './ChatPage.module.css';
 
@@ -34,17 +38,115 @@ const ChatPage = () => {
     const [showDropdown, setShowDropdown] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
+    const [showGroupMembers, setShowGroupMembers] = useState(false);
+    const [memberProfiles, setMemberProfiles] = useState({});
+    const [membersLoading, setMembersLoading] = useState(false);
+    const [inviteUserId, setInviteUserId] = useState('');
+    const [inviteSubmitting, setInviteSubmitting] = useState(false);
+    const [removingUserId, setRemovingUserId] = useState(null);
     
     const messagesEndRef = useRef(null);
     const dropdownRef = useRef(null);
     const socketRef = useRef(null);
     const activeConvIdRef = useRef(activeConvId);
+    const conversationsRef = useRef(conversations);
+    const memberProfilesRef = useRef(memberProfiles);
+    const profileLoadInFlightRef = useRef(new Set());
     const fileInputRef = useRef(null);
     const emojiPickerRef = useRef(null);
 
     useEffect(() => {
         activeConvIdRef.current = activeConvId;
     }, [activeConvId]);
+
+    useEffect(() => {
+        conversationsRef.current = conversations;
+    }, [conversations]);
+
+    useEffect(() => {
+        memberProfilesRef.current = memberProfiles;
+    }, [memberProfiles]);
+
+    const ensureUserProfileLoaded = useCallback(async (userId) => {
+        if (!userId) return;
+        if (memberProfilesRef.current[userId]) return;
+        if (profileLoadInFlightRef.current.has(userId)) return;
+
+        profileLoadInFlightRef.current.add(userId);
+        try {
+            const profile = await getUserProfile(userId);
+            setMemberProfiles(prev => {
+                if (prev[userId]) return prev;
+                return { ...prev, [userId]: profile };
+            });
+        } catch {
+            setMemberProfiles(prev => {
+                if (prev[userId]) return prev;
+                return {
+                    ...prev,
+                    [userId]: { id: userId, username: userId.slice(0, 6), profile: { avatar_url: null } }
+                };
+            });
+        } finally {
+            profileLoadInFlightRef.current.delete(userId);
+        }
+    }, []);
+
+    const loadAllData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [reqsData, convsData, friendsData] = await Promise.all([
+                getFriendRequests(),
+                getConversations(),
+                getFriends()
+            ]);
+
+            setRequests(Array.isArray(reqsData) ? reqsData : []);
+            setConversations(Array.isArray(convsData) ? convsData : []);
+            setFriends(Array.isArray(friendsData) ? friendsData : []);
+
+            if (window.innerWidth > 900 && Array.isArray(convsData) && convsData.length > 0 && !activeConvIdRef.current) {
+                setActiveConvId(convsData[0].id);
+            }
+        } catch (error) {
+            console.error("Failed to load data", error);
+            toast.error("加载数据失败");
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const loadMessages = useCallback(async (id) => {
+        try {
+            const data = await getMessages(id);
+            const nextMessages = Array.isArray(data) ? data : [];
+            setMessages(nextMessages);
+
+            const conv = conversationsRef.current.find(c => c.id === id);
+            if (conv?.type === 'group') {
+                const senderIds = Array.from(
+                    new Set(nextMessages.map(m => m?.sender_id).filter(Boolean))
+                );
+                await Promise.all(senderIds.map(ensureUserProfileLoaded));
+            }
+        } catch (error) {
+            console.error("Failed to load messages", error);
+            toast.error("加载消息失败");
+        }
+    }, [ensureUserProfileLoaded]);
+
+    const scrollToBottom = useCallback(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, []);
+
+    const handleClickOutside = useCallback((event) => {
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+            setShowDropdown(false);
+        }
+        if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target) && !event.target.closest(`.${styles.attachBtn}`)) {
+            setShowEmojiPicker(false);
+        }
+    }, []);
 
     // Socket initialization
     useEffect(() => {
@@ -63,6 +165,10 @@ const ChatPage = () => {
             
             // 1. Update messages if looking at this conversation
             if (activeConvIdRef.current === msg.conversation_id) {
+                const conv = conversationsRef.current.find(c => c.id === msg.conversation_id);
+                if (conv?.type === 'group') {
+                    ensureUserProfileLoaded(msg.sender_id);
+                }
                 setMessages(prev => {
                     if (prev.find(m => m.id === msg.id)) return prev;
                     return [...prev, msg];
@@ -87,7 +193,7 @@ const ChatPage = () => {
         return () => {
             socket.disconnect();
         };
-    }, []);
+    }, [ensureUserProfileLoaded]);
 
     // Join/Leave conversation room
     useEffect(() => {
@@ -103,16 +209,7 @@ const ChatPage = () => {
         loadAllData();
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const handleClickOutside = (event) => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-            setShowDropdown(false);
-        }
-        if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target) && !event.target.closest(`.${styles.attachBtn}`)) {
-            setShowEmojiPicker(false);
-        }
-    };
+    }, [handleClickOutside, loadAllData]);
 
     useEffect(() => {
         if (activeConvId) {
@@ -120,49 +217,11 @@ const ChatPage = () => {
             setNewMessage('');
             setSelectedFile(null);
         }
-    }, [activeConvId]);
+    }, [activeConvId, loadMessages]);
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages]);
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-
-    const loadAllData = async () => {
-        setLoading(true);
-        try {
-            const [reqsData, convsData, friendsData] = await Promise.all([
-                getFriendRequests(),
-                getConversations(),
-                getFriends()
-            ]);
-            
-            setRequests(Array.isArray(reqsData) ? reqsData : []);
-            setConversations(Array.isArray(convsData) ? convsData : []);
-            setFriends(Array.isArray(friendsData) ? friendsData : []);
-
-            if (window.innerWidth > 900 && Array.isArray(convsData) && convsData.length > 0 && !activeConvId) {
-                setActiveConvId(convsData[0].id);
-            }
-        } catch (error) {
-            console.error("Failed to load data", error);
-            toast.error("加载数据失败");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const loadMessages = async (id) => {
-        try {
-            const data = await getMessages(id);
-            setMessages(Array.isArray(data) ? data : []);
-        } catch (error) {
-            console.error("Failed to load messages", error);
-            toast.error("加载消息失败");
-        }
-    };
+    }, [messages, scrollToBottom]);
 
     const handleFileSelect = (e) => {
         const file = e.target.files[0];
@@ -254,11 +313,16 @@ const ChatPage = () => {
         }
     };
 
+    const refreshConversations = async () => {
+        const convs = await getConversations();
+        setConversations(Array.isArray(convs) ? convs : []);
+        return convs;
+    };
+
     const handleStartChat = async (friendId) => {
         try {
             const result = await createConversation(friendId);
-            const convs = await getConversations();
-            setConversations(convs);
+            const convs = await refreshConversations();
             
             const convId = result.id || result.conversation_id;
             if (convId) {
@@ -286,6 +350,7 @@ const ChatPage = () => {
     const getOtherUserId = (conv) => {
         // Try to find the other user ID. 
         // If 'participants' is array of IDs and 'user.id' is known.
+        if (conv.type === 'group') return null;
         if (conv.other_user_id) return conv.other_user_id;
         
         if (conv.participants && user) {
@@ -314,7 +379,118 @@ const ChatPage = () => {
     };
 
     const activeConv = conversations.find(c => c.id === activeConvId);
+    const isGroupConv = activeConv?.type === 'group';
+    const isGroupOwner = isGroupConv && user?.id && activeConv?.participants?.[0] === user.id;
     const otherUserId = activeConv ? getOtherUserId(activeConv) : null;
+
+    const loadMemberProfiles = useCallback(async (participantIds) => {
+        if (!participantIds || participantIds.length === 0) return;
+        const missingIds = participantIds.filter(id => !memberProfilesRef.current[id] && !profileLoadInFlightRef.current.has(id));
+        if (missingIds.length === 0) return;
+
+        setMembersLoading(true);
+        try {
+            for (const id of missingIds) {
+                profileLoadInFlightRef.current.add(id);
+            }
+            const entries = await Promise.all(missingIds.map(async (id) => {
+                try {
+                    const profile = await getUserProfile(id);
+                    return [id, profile];
+                } catch {
+                    return [id, { id, username: id.slice(0, 6), profile: { avatar_url: null } }];
+                }
+            }));
+
+            setMemberProfiles(prev => {
+                const next = { ...prev };
+                for (const [id, profile] of entries) {
+                    if (!next[id]) next[id] = profile;
+                }
+                return next;
+            });
+        } finally {
+            for (const id of missingIds) {
+                profileLoadInFlightRef.current.delete(id);
+            }
+            setMembersLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!showGroupMembers || !isGroupConv) return;
+        loadMemberProfiles(activeConv?.participants || []);
+        setInviteUserId('');
+    }, [activeConv?.participants, isGroupConv, loadMemberProfiles, showGroupMembers]);
+
+    useEffect(() => {
+        if (!activeConvId) return;
+        if (!isGroupConv) return;
+        loadMemberProfiles(activeConv?.participants || []);
+    }, [activeConv?.participants, activeConvId, isGroupConv, loadMemberProfiles]);
+
+    const handleInviteToGroup = async () => {
+        if (!activeConvId || !inviteUserId) return;
+        setInviteSubmitting(true);
+        try {
+            await addGroupParticipant(activeConvId, inviteUserId);
+            toast.success("已邀请进群");
+            await refreshConversations();
+            await loadMemberProfiles([inviteUserId]);
+            setInviteUserId('');
+        } catch (error) {
+            const msg = error?.response?.data?.error || error?.message || '邀请失败';
+            toast.error(msg);
+        } finally {
+            setInviteSubmitting(false);
+        }
+    };
+
+    const handleKickFromGroup = async (targetId) => {
+        if (!activeConvId || !targetId || targetId === user?.id) return;
+        if (!isGroupOwner) {
+            toast.error('只有群主可以踢人');
+            return;
+        }
+        const confirmed = window.confirm('确定要将该成员移出群聊吗？');
+        if (!confirmed) return;
+
+        setRemovingUserId(targetId);
+        try {
+            await removeGroupParticipant(activeConvId, targetId);
+            toast.success('已移出群聊');
+            await refreshConversations();
+        } catch (error) {
+            const msg = error?.response?.data?.error || error?.message || '操作失败';
+            toast.error(msg);
+        } finally {
+            setRemovingUserId(null);
+        }
+    };
+
+    const handleLeaveGroup = async () => {
+        if (!activeConvId || !user?.id) return;
+        const confirmed = window.confirm('确定要退出该群聊吗？');
+        if (!confirmed) return;
+
+        setRemovingUserId(user.id);
+        try {
+            await removeGroupParticipant(activeConvId, user.id);
+            toast.success('已退出群聊');
+            setShowGroupMembers(false);
+            setActiveConvId(null);
+            await loadAllData();
+        } catch (error) {
+            const msg = error?.response?.data?.error || error?.message || '退群失败';
+            toast.error(msg);
+        } finally {
+            setRemovingUserId(null);
+        }
+    };
+
+    const invitableFriends = isGroupConv
+        ? friends.filter(f => !activeConv?.participants?.includes(f.id))
+        : [];
 
     return (
         <div className={`${styles.container} ${activeConvId ? styles.viewChat : ''}`}>
@@ -435,6 +611,18 @@ const ChatPage = () => {
                                 </span>
                                 <span className={styles.headerStatus}>在线</span>
                             </Link>
+                            {isGroupConv && (
+                                <div style={{ marginLeft: 'auto' }}>
+                                    <button
+                                        type="button"
+                                        className={styles.iconBtn}
+                                        title="群成员"
+                                        onClick={() => setShowGroupMembers(true)}
+                                    >
+                                        <Users size={20} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         <div className={styles.messages}>
@@ -442,6 +630,9 @@ const ChatPage = () => {
                                 const isMe = msg.sender_id === user?.id;
                                 const prevMsg = messages[index - 1];
                                 const isChain = prevMsg && prevMsg.sender_id === msg.sender_id;
+                                const senderProfile = isGroupConv ? memberProfiles[msg.sender_id] : null;
+                                const senderAvatar = isMe ? user?.profile?.avatar_url : senderProfile?.profile?.avatar_url;
+                                const senderName = isMe ? (user?.username || '我') : (senderProfile?.username || msg.sender_id?.slice(0, 6) || 'U');
                                 
                                 return (
                                     <div 
@@ -449,6 +640,15 @@ const ChatPage = () => {
                                         className={`${styles.messageRow} ${isMe ? styles.me : ''}`}
                                         data-chain={!isChain ? "first" : ""}
                                     >
+                                        {!isMe && isGroupConv && (
+                                            <div className={styles.msgAvatar} title={senderName}>
+                                                {senderAvatar ? (
+                                                    <img src={senderAvatar} alt="" className={styles.msgAvatarImg} />
+                                                ) : (
+                                                    <span className={styles.msgAvatarFallback}>{senderName.charAt(0).toUpperCase()}</span>
+                                                )}
+                                            </div>
+                                        )}
                                         <div className={styles.messageBubble}>
                                             {msg.type === 'image' ? (
                                                 <div className={styles.imageMessage}>
@@ -469,6 +669,15 @@ const ChatPage = () => {
                                                 msg.content
                                             )}
                                         </div>
+                                        {isMe && isGroupConv && (
+                                            <div className={styles.msgAvatar} title={senderName}>
+                                                {senderAvatar ? (
+                                                    <img src={senderAvatar} alt="" className={styles.msgAvatarImg} />
+                                                ) : (
+                                                    <span className={styles.msgAvatarFallback}>{senderName.charAt(0).toUpperCase()}</span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -543,6 +752,102 @@ const ChatPage = () => {
                     onClose={() => setShowCreateGroup(false)} 
                     onSuccess={loadAllData} 
                 />
+            )}
+            {showGroupMembers && isGroupConv && (
+                <Modal
+                    title={`群成员（${activeConv?.participants?.length || 0}）`}
+                    isOpen={true}
+                    onClose={() => setShowGroupMembers(false)}
+                    className={styles.groupModal}
+                >
+                    <div className={styles.groupSection}>
+                        <div className={styles.groupSectionTitle}>拉人进群</div>
+                        <div className={styles.groupInviteRow}>
+                            <select
+                                className={styles.groupSelect}
+                                value={inviteUserId}
+                                onChange={(e) => setInviteUserId(e.target.value)}
+                                disabled={inviteSubmitting || invitableFriends.length === 0}
+                            >
+                                <option value="">
+                                    {invitableFriends.length === 0 ? '暂无可邀请好友' : '选择好友...'}
+                                </option>
+                                {invitableFriends.map(f => (
+                                    <option key={f.id} value={f.id}>
+                                        {f.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <button
+                                type="button"
+                                className={styles.primaryActionBtn}
+                                onClick={handleInviteToGroup}
+                                disabled={inviteSubmitting || !inviteUserId}
+                            >
+                                邀请
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className={styles.groupSection}>
+                        <div className={styles.groupSectionTitle}>成员列表</div>
+                        <div className={styles.memberList}>
+                            {(activeConv?.participants || []).map(pid => {
+                                const p = memberProfiles[pid];
+                                const displayName = p?.username || pid.slice(0, 6);
+                                const avatarUrl = p?.profile?.avatar_url;
+                                const isMe = pid === user?.id;
+
+                                return (
+                                    <div key={pid} className={styles.memberRow}>
+                                        <div className={styles.memberLeft}>
+                                            <div className={styles.memberAvatar}>
+                                                {avatarUrl ? (
+                                                    <img src={avatarUrl} alt="" />
+                                                ) : (
+                                                    <span>{displayName.charAt(0).toUpperCase()}</span>
+                                                )}
+                                            </div>
+                                            <div className={styles.memberInfo}>
+                                                <div className={styles.memberName}>
+                                                    {displayName}
+                                                    {isMe && <span className={styles.meBadge}>我</span>}
+                                                </div>
+                                                <div className={styles.memberSub}>{pid}</div>
+                                            </div>
+                                        </div>
+
+                                        {isGroupOwner && !isMe && (
+                                            <button
+                                                type="button"
+                                                className={styles.dangerActionBtn}
+                                                onClick={() => handleKickFromGroup(pid)}
+                                                disabled={removingUserId === pid || membersLoading}
+                                            >
+                                                踢出
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+
+                            {membersLoading && (
+                                <div className={styles.memberLoading}>加载成员信息中...</div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className={styles.groupFooter}>
+                        <button
+                            type="button"
+                            className={styles.leaveBtn}
+                            onClick={handleLeaveGroup}
+                            disabled={removingUserId === user?.id}
+                        >
+                            退出群聊
+                        </button>
+                    </div>
+                </Modal>
             )}
         </div>
     );

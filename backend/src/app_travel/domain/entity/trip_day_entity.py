@@ -100,6 +100,10 @@ class TripDay:
             if activity.id == activity_id:
                 return activity
         return None
+
+    def get_activity(self, activity_id: str) -> Optional[Activity]:
+        """获取活动"""
+        return self.find_activity(activity_id)
     
     def replace_activities(self, activities: List[Activity]) -> None:
         """替换所有活动（用于批量更新）

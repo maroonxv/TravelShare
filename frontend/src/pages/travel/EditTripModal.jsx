@@ -70,7 +70,6 @@ const EditTripModal = ({ trip, onClose, onSuccess, isOpen = true }) => {
                     >
                         <option value="private">私有</option>
                         <option value="public">公开</option>
-                        <option value="shared">共享</option>
                     </select>
                 </div>
 

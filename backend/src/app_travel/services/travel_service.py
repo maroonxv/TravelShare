@@ -353,6 +353,21 @@ class TravelService:
         if not trip:
             return None
         
+        # Auto-geocode if coordinates are missing
+        if (latitude is None or longitude is None) and (location_name or address):
+            try:
+                # Prioritize address, fallback to location_name
+                query = address if address else location_name
+                geo_loc = self._geo_service.geocode(query)
+                if geo_loc:
+                    latitude = geo_loc.latitude
+                    longitude = geo_loc.longitude
+                    # If address was missing, fill it from geocode result
+                    if not address:
+                        address = geo_loc.address
+            except Exception as e:
+                print(f"Auto-geocode failed for {location_name}: {e}")
+
         # 构建活动实体
         location = Location(
             name=location_name,
@@ -406,11 +421,29 @@ class TravelService:
         
         # 处理特殊字段转换
         if 'location_name' in updates:
+            loc_name = updates.pop('location_name')
+            lat = updates.pop('latitude', None)
+            lng = updates.pop('longitude', None)
+            addr = updates.pop('address', None)
+
+            # Auto-geocode if coordinates are missing
+            if (lat is None or lng is None) and (loc_name or addr):
+                try:
+                    query = addr if addr else loc_name
+                    geo_loc = self._geo_service.geocode(query)
+                    if geo_loc:
+                        lat = geo_loc.latitude
+                        lng = geo_loc.longitude
+                        if not addr:
+                            addr = geo_loc.address
+                except Exception as e:
+                    print(f"Auto-geocode failed for {loc_name}: {e}")
+
             updates['location'] = Location(
-                name=updates.pop('location_name'),
-                latitude=updates.pop('latitude', None),
-                longitude=updates.pop('longitude', None),
-                address=updates.pop('address', None)
+                name=loc_name,
+                latitude=lat,
+                longitude=lng,
+                address=addr
             )
         if 'activity_type' in updates:
             updates['activity_type'] = ActivityType.from_string(updates['activity_type'])
@@ -498,11 +531,29 @@ class TravelService:
         # 构建活动列表
         activities = []
         for data in activities_data:
+            loc_name = data['location_name']
+            lat = data.get('latitude')
+            lng = data.get('longitude')
+            addr = data.get('address')
+
+            # Auto-geocode if coordinates are missing
+            if (lat is None or lng is None) and (loc_name or addr):
+                try:
+                    query = addr if addr else loc_name
+                    geo_loc = self._geo_service.geocode(query)
+                    if geo_loc:
+                        lat = geo_loc.latitude
+                        lng = geo_loc.longitude
+                        if not addr:
+                            addr = geo_loc.address
+                except Exception as e:
+                    print(f"Auto-geocode failed for {loc_name}: {e}")
+
             location = Location(
-                name=data['location_name'],
-                latitude=data.get('latitude'),
-                longitude=data.get('longitude'),
-                address=data.get('address')
+                name=loc_name,
+                latitude=lat,
+                longitude=lng,
+                address=addr
             )
             cost_amount = data.get('cost_amount')
             cost = Money(Decimal(str(cost_amount)), data.get('cost_currency', 'CNY')) if cost_amount else None

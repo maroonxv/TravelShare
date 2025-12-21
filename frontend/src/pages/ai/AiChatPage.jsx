@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useAuth } from '../../context/useAuth';
 import { useNavigate } from 'react-router-dom';
 import styles from './AiChatPage.module.css';
 import ReactMarkdown from 'react-markdown';
@@ -24,21 +24,7 @@ const AiChatPage = () => {
     scrollToBottom();
   }, [messages]);
 
-  useEffect(() => {
-    if (user) {
-        fetchConversations();
-    }
-  }, [user]);
-
-  useEffect(() => {
-      if (conversationId) {
-          fetchMessages(conversationId);
-      } else {
-          setMessages([]);
-      }
-  }, [conversationId]);
-
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
       try {
           const response = await fetch(`http://localhost:5001/api/ai/conversations?user_id=${user?.id || 'temp_user'}`);
           if (response.ok) {
@@ -48,9 +34,9 @@ const AiChatPage = () => {
       } catch (error) {
           console.error("Failed to load conversations", error);
       }
-  };
+  }, [user?.id]);
 
-  const fetchMessages = async (id) => {
+  const fetchMessages = useCallback(async (id) => {
       setIsLoading(true);
       try {
           const response = await fetch(`http://localhost:5001/api/ai/conversations/${id}?user_id=${user?.id || 'temp_user'}`);
@@ -64,7 +50,21 @@ const AiChatPage = () => {
       } finally {
           setIsLoading(false);
       }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user) {
+        fetchConversations();
+    }
+  }, [fetchConversations, user]);
+
+  useEffect(() => {
+      if (conversationId) {
+          fetchMessages(conversationId);
+      } else {
+          setMessages([]);
+      }
+  }, [conversationId, fetchMessages]);
 
   const handleNewChat = () => {
       setConversationId(null);

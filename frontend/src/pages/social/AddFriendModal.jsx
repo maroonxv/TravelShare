@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Search, UserPlus, Check, User } from 'lucide-react';
 import { searchUsers, sendFriendRequest } from '../../api/social';
 import Input from '../../components/Input';
@@ -13,18 +13,7 @@ const AddFriendModal = ({ onClose }) => {
     const [loading, setLoading] = useState(false);
     const [sentRequests, setSentRequests] = useState(new Set());
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (query.trim()) {
-                performSearch();
-            } else {
-                setResults([]);
-            }
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [query]);
-
-    const performSearch = async () => {
+    const performSearch = useCallback(async () => {
         setLoading(true);
         try {
             const data = await searchUsers(query);
@@ -35,7 +24,18 @@ const AddFriendModal = ({ onClose }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [query]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (query.trim()) {
+                performSearch();
+            } else {
+                setResults([]);
+            }
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [performSearch, query]);
 
     const handleAdd = async (userId) => {
         try {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createTrip, uploadTripCover } from '../../api/travel';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import Modal from '../../components/Modal';
@@ -102,7 +102,6 @@ const CreateTripModal = ({ onClose, onSuccess, isOpen = true }) => {
                     >
                         <option value="private">私有</option>
                         <option value="public">公开</option>
-                        <option value="shared">共享</option>
                     </select>
                 </div>
 

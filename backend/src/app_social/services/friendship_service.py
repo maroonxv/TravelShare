@@ -230,6 +230,7 @@ class FriendshipService:
                 results.append({
                     "id": u.id.value,
                     "name": u.username.value,
+                    "username": u.username.value,
                     "avatar": u.profile.avatar_url,
                     "bio": u.profile.bio
                 })

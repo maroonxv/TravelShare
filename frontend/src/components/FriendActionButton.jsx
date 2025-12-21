@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Button from './Button';
 import { UserPlus, UserCheck, Clock, MessageSquare, X } from 'lucide-react';
 import { sendFriendRequest, acceptFriendRequest, rejectFriendRequest, getFriendshipStatus } from '../api/social';
@@ -14,7 +14,7 @@ const FriendActionButton = ({ targetUserId, initialStatus }) => {
     const navigate = useNavigate();
 
     // Fetch status if not provided or to refresh
-    const fetchStatus = async () => {
+    const fetchStatus = useCallback(async () => {
         try {
             const res = await getFriendshipStatus(targetUserId);
             setStatus(res.status);
@@ -23,13 +23,13 @@ const FriendActionButton = ({ targetUserId, initialStatus }) => {
         } catch (err) {
             console.error(err);
         }
-    };
+    }, [targetUserId]);
 
     useEffect(() => {
         if (!initialStatus) {
             fetchStatus();
         }
-    }, [targetUserId]);
+    }, [fetchStatus, initialStatus]);
 
     const handleAddFriend = async () => {
         setLoading(true);

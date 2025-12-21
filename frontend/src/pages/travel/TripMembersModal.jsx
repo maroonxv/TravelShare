@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { removeMember } from '../../api/travel';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import Button from '../../components/Button';
 import Modal from '../../components/Modal';
 import { Trash2, Shield } from 'lucide-react';
