@@ -39,8 +39,8 @@ const AMapDebug = ({ markers, polylines }) => {
     return null;
 };
 
-// Raw Map Initializer Component
-const RawMap = ({ center, markers, polylines }) => {
+// RawMap Initializer Component
+const RawMap = ({ center, markers, polylines, transitLabels }) => {
     const mapContainerRef = React.useRef(null);
     const mapInstanceRef = React.useRef(null);
 
@@ -110,6 +110,38 @@ const RawMap = ({ center, markers, polylines }) => {
                 }
             });
             
+            // Add Transit Labels
+            if (transitLabels) {
+                transitLabels.forEach(l => {
+                    if (l.position && !isNaN(l.position[0]) && !isNaN(l.position[1])) {
+                        try {
+                            const text = new window.AMap.Text({
+                                text: l.text,
+                                position: l.position,
+                                anchor: 'center',
+                                style: {
+                                    'background-color': 'rgba(255, 255, 255, 0.95)',
+                                    'border': '1px solid #cbd5e1',
+                                    'border-radius': '4px',
+                                    'padding': '4px 8px',
+                                    'font-size': '12px',
+                                    'color': '#0f172a',
+                                    'box-shadow': '0 2px 4px rgba(0,0,0,0.1)',
+                                    'font-weight': '600',
+                                    'white-space': 'nowrap',
+                                    'z-index': '100'
+                                },
+                                map: map
+                            });
+                            // We don't necessarily need to add labels to validOverlays for fitView, 
+                            // but it ensures they are visible if they are far from the path/markers (unlikely for midpoints)
+                        } catch (e) {
+                            console.error('[RawMap] Error creating transit label:', l, e);
+                        }
+                    }
+                });
+            }
+
             // Only fit view if there are valid overlays
             if (validOverlays.length > 0) {
                 try {
@@ -134,7 +166,7 @@ const RawMap = ({ center, markers, polylines }) => {
                 mapInstanceRef.current = null;
             }
         };
-    }, [center, markers, polylines]);
+    }, [center, markers, polylines, transitLabels]);
 
     return <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />;
 };
@@ -248,7 +280,7 @@ const TripDetailPage = () => {
         return {
             position: [lng, lat],
             title: `${i + 1}. ${act.name}`,
-            label: { content: act.name, direction: 'top' }
+            label: { content: `<div style="color: #000; font-weight: 600;">${act.name}</div>`, direction: 'top' }
         };
     }).filter(Boolean) || [];
 
@@ -267,6 +299,31 @@ const TripDetailPage = () => {
         return {
             path,
             style: { strokeColor: '#F5222D', strokeWeight: 6, strokeOpacity: 0.8 }
+        };
+    }).filter(Boolean) || [];
+
+    const transitLabels = currentDay?.transits?.map(t => {
+        if (!t.polyline) return null;
+        const path = t.polyline.split(';').map(p => {
+            const [lngStr, latStr] = p.split(',');
+            const lng = parseFloat(lngStr);
+            const lat = parseFloat(latStr);
+            if (isNaN(lng) || isNaN(lat)) return null;
+            return [lng, lat];
+        }).filter(Boolean);
+
+        if (path.length < 2) return null;
+
+        const midIndex = Math.floor(path.length / 2);
+        const position = path[midIndex];
+
+        const mode = TRANSIT_MODE_MAP[t.mode] || t.mode;
+        const duration = Math.round(t.duration_seconds / 60);
+        const distance = (t.distance_meters / 1000).toFixed(1);
+        
+        return {
+            position,
+            text: `${mode}: ${duration}分钟 ${distance}km`
         };
     }).filter(Boolean) || [];
 
@@ -463,7 +520,7 @@ const TripDetailPage = () => {
                 <div style={{ height: '600px', width: '100%', borderRadius: '0.5rem', overflow: 'hidden', border: '1px solid #334155', marginBottom: '2rem', position: 'relative' }}>
                     <APILoader akey={import.meta.env.VITE_AMAP_KEY} version="2.0">
                         <AMapDebug markers={mapMarkers} polylines={mapPolylines} />
-                        <RawMap center={mapCenter} markers={mapMarkers} polylines={mapPolylines} />
+                        <RawMap center={mapCenter} markers={mapMarkers} polylines={mapPolylines} transitLabels={transitLabels} />
                     </APILoader>
                 </div>
             ) : (
