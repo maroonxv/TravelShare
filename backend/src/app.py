@@ -15,9 +15,14 @@ from app_social.infrastructure.database.persistent_model.message_po import Messa
 from app_social.infrastructure.database.po.friendship_po import FriendshipPO
 # Travel
 from app_travel.infrastructure.database.persistent_model.trip_po import TripPO, TripMemberPO, TripDayPO, ActivityPO, TransitPO
+from app_travel.infrastructure.database.persistent_model.expense_po import ExpensePO, ExpenseSharePO, SettlementTransferPO
+from app_travel.infrastructure.database.persistent_model.template_po import TripTemplatePO
+# Notification
+from app_notification.infrastructure.database.persistent_model.notification_po import NotificationPO
 from app_travel.view.travel_view import travel_bp
 from app_social.view.social_view import social_bp
 from app_auth.view.auth_view import auth_bp
+from app_notification.view.notification_view import notification_bp
 from app_admin import admin_bp
 from app_ai import ai_bp
 from shared.infrastructure.socket import socketio
@@ -50,6 +55,7 @@ def create_app():
     app.register_blueprint(travel_bp)
     app.register_blueprint(social_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(notification_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(ai_bp)
     

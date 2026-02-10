@@ -690,3 +690,595 @@ class TravelService:
             self._trip_repository.save(trip)
         
         return trip
+
+    # ==================== 费用管理 ====================
+    
+    def add_expense(
+        self,
+        trip_id: str,
+        description: str,
+        amount: float,
+        payer_id: str,
+        category: str = "other",
+        currency: str = "CNY",
+        split_mode: str = "equal",
+        participant_ids: Optional[List[str]] = None,
+        exact_amounts: Optional[List[float]] = None,
+        percentages: Optional[List[float]] = None,
+        created_by: Optional[str] = None
+    ) -> 'Expense':
+        """添加费用
+        
+        Args:
+            trip_id: 行程ID
+            description: 费用描述
+            amount: 总金额
+            payer_id: 付款人ID
+            category: 费用分类
+            currency: 货币
+            split_mode: 分摊方式 (equal/exact/percentage)
+            participant_ids: 参与者ID列表（可选，默认为所有成员）
+            exact_amounts: 精确金额列表（exact模式）
+            percentages: 百分比列表（percentage模式）
+            created_by: 创建者ID（可选，默认为付款人）
+            
+        Returns:
+            创建的费用实体
+            
+        Raises:
+            ValueError: 验证失败
+        """
+        from app_travel.domain.entity.expense import Expense
+        from app_travel.domain.value_objects.expense_value_objects import (
+            SplitMode, ExpenseCategory
+        )
+        from app_travel.domain.domain_event.expense_events import ExpenseAddedEvent
+        from app_travel.infrastructure.database.dao_impl.sqlalchemy_expense_dao import SQLAlchemyExpenseDAO
+        from app_travel.infrastructure.database.persistent_model.expense_po import ExpensePO
+        from shared.database.core import get_db_session
+        
+        # 获取行程
+        trip = self._trip_repository.find_by_id(TripId(trip_id))
+        if not trip:
+            raise ValueError(f"Trip {trip_id} not found")
+        
+        # 状态门控：只有 planning 或 in_progress 允许添加费用
+        if trip.status not in [TripStatus.PLANNING, TripStatus.IN_PROGRESS]:
+            raise ValueError(f"Cannot add expense to trip with status: {trip.status.value}")
+        
+        # 验证付款人是成员
+        if not trip.is_member(payer_id):
+            raise ValueError(f"Payer is not a member of this trip")
+        
+        # 默认参与者为所有成员
+        if participant_ids is None:
+            participant_ids = [m.user_id for m in trip.members]
+        
+        # 验证所有参与者都是成员
+        for participant_id in participant_ids:
+            if not trip.is_member(participant_id):
+                raise ValueError(f"Participant {participant_id} is not a member of this trip")
+        
+        # 转换为 Decimal
+        decimal_amount = Decimal(str(amount))
+        decimal_exact_amounts = [Decimal(str(a)) for a in exact_amounts] if exact_amounts else None
+        decimal_percentages = [Decimal(str(p)) for p in percentages] if percentages else None
+        
+        # 创建费用实体
+        expense = Expense.create(
+            trip_id=trip_id,
+            description=description,
+            amount=decimal_amount,
+            payer_id=payer_id,
+            participant_ids=participant_ids,
+            split_mode=SplitMode.from_string(split_mode),
+            category=ExpenseCategory.from_string(category),
+            currency=currency,
+            created_by=created_by,
+            exact_amounts=decimal_exact_amounts,
+            percentages=decimal_percentages
+        )
+        
+        # 持久化
+        session = get_db_session()
+        expense_dao = SQLAlchemyExpenseDAO(session)
+        expense_po = ExpensePO.from_domain(expense)
+        expense_dao.create(expense_po)
+        session.commit()
+        
+        # 发布事件
+        event = ExpenseAddedEvent(
+            trip_id=trip_id,
+            expense_id=expense.id,
+            payer_id=payer_id,
+            amount=str(expense.amount),
+            currency=currency,
+            description=description
+        )
+        self._event_bus.publish(event)
+        
+        return expense
+    
+    def list_expenses(self, trip_id: str) -> List['Expense']:
+        """获取行程的所有费用
+        
+        Args:
+            trip_id: 行程ID
+            
+        Returns:
+            费用列表
+        """
+        from app_travel.infrastructure.database.dao_impl.sqlalchemy_expense_dao import SQLAlchemyExpenseDAO
+        from shared.database.core import get_db_session
+        
+        session = get_db_session()
+        expense_dao = SQLAlchemyExpenseDAO(session)
+        expense_pos = expense_dao.get_by_trip_id(trip_id)
+        
+        return [po.to_domain() for po in expense_pos]
+    
+    def delete_expense(
+        self,
+        trip_id: str,
+        expense_id: str,
+        deleted_by: str
+    ) -> bool:
+        """删除费用
+        
+        Args:
+            trip_id: 行程ID
+            expense_id: 费用ID
+            deleted_by: 删除者ID
+            
+        Returns:
+            是否成功删除
+        """
+        from app_travel.domain.domain_event.expense_events import ExpenseDeletedEvent
+        from app_travel.infrastructure.database.dao_impl.sqlalchemy_expense_dao import SQLAlchemyExpenseDAO
+        from shared.database.core import get_db_session
+        
+        # 验证行程存在
+        trip = self._trip_repository.find_by_id(TripId(trip_id))
+        if not trip:
+            return False
+        
+        # 删除费用
+        session = get_db_session()
+        expense_dao = SQLAlchemyExpenseDAO(session)
+        success = expense_dao.delete(expense_id)
+        
+        if success:
+            session.commit()
+            
+            # 发布事件
+            event = ExpenseDeletedEvent(
+                trip_id=trip_id,
+                expense_id=expense_id,
+                deleted_by=deleted_by
+            )
+            self._event_bus.publish(event)
+        
+        return success
+    
+    def get_expense_summary(self, trip_id: str) -> Dict[str, Any]:
+        """获取费用汇总
+        
+        Args:
+            trip_id: 行程ID
+            
+        Returns:
+            费用汇总信息
+        """
+        expenses = self.list_expenses(trip_id)
+        
+        if not expenses:
+            return {
+                'total_amount': 0,
+                'currency': 'CNY',
+                'per_member': {},
+                'by_category': {}
+            }
+        
+        # 总金额
+        total_amount = sum(e.amount for e in expenses)
+        currency = expenses[0].currency if expenses else 'CNY'
+        
+        # 每个成员的统计
+        per_member = {}
+        for expense in expenses:
+            # 付款人
+            if expense.payer_id not in per_member:
+                per_member[expense.payer_id] = {'paid': Decimal('0'), 'owed': Decimal('0')}
+            per_member[expense.payer_id]['paid'] += expense.amount
+            
+            # 参与者
+            for share in expense.shares:
+                if share.user_id not in per_member:
+                    per_member[share.user_id] = {'paid': Decimal('0'), 'owed': Decimal('0')}
+                per_member[share.user_id]['owed'] += share.amount
+        
+        # 转换为字符串
+        per_member_str = {
+            user_id: {
+                'paid': str(stats['paid']),
+                'owed': str(stats['owed'])
+            }
+            for user_id, stats in per_member.items()
+        }
+        
+        # 按分类统计
+        by_category = {}
+        for expense in expenses:
+            category = expense.category.value
+            if category not in by_category:
+                by_category[category] = Decimal('0')
+            by_category[category] += expense.amount
+        
+        by_category_str = {cat: str(amt) for cat, amt in by_category.items()}
+        
+        return {
+            'total_amount': str(total_amount),
+            'currency': currency,
+            'per_member': per_member_str,
+            'by_category': by_category_str
+        }
+    
+    def get_settlement(self, trip_id: str) -> List[Dict[str, Any]]:
+        """获取结算方案
+        
+        Args:
+            trip_id: 行程ID
+            
+        Returns:
+            结算转账列表
+        """
+        from app_travel.domain.domain_service.settlement_service import SettlementService
+        
+        expenses = self.list_expenses(trip_id)
+        
+        if not expenses:
+            return []
+        
+        # 计算余额
+        balances = SettlementService.calculate_balances(expenses)
+        
+        # 最小化转账
+        transfers = SettlementService.minimize_transfers(balances)
+        
+        # 转换为字典
+        return [
+            {
+                'from_user_id': t.from_user_id,
+                'to_user_id': t.to_user_id,
+                'amount': str(t.amount),
+                'currency': t.currency,
+                'is_settled': t.is_settled
+            }
+            for t in transfers
+        ]
+    
+    def mark_transfer_settled(
+        self,
+        trip_id: str,
+        from_user_id: str,
+        to_user_id: str,
+        amount: float
+    ) -> bool:
+        """标记转账已结清
+        
+        Args:
+            trip_id: 行程ID
+            from_user_id: 付款方ID
+            to_user_id: 收款方ID
+            amount: 金额
+            
+        Returns:
+            是否成功标记
+        """
+        from app_travel.domain.domain_event.expense_events import SettlementMarkedEvent
+        from app_travel.infrastructure.database.dao_impl.sqlalchemy_expense_dao import SQLAlchemyExpenseDAO
+        from app_travel.infrastructure.database.persistent_model.expense_po import SettlementTransferPO
+        from shared.database.core import get_db_session
+        
+        # 查找或创建结算转账记录
+        session = get_db_session()
+        expense_dao = SQLAlchemyExpenseDAO(session)
+        
+        transfers = expense_dao.get_settlement_transfers_by_trip_id(trip_id)
+        
+        # 查找匹配的转账
+        decimal_amount = Decimal(str(amount))
+        target_transfer = None
+        for transfer in transfers:
+            if (transfer.from_user_id == from_user_id and
+                transfer.to_user_id == to_user_id and
+                transfer.amount == decimal_amount):
+                target_transfer = transfer
+                break
+        
+        if not target_transfer:
+            # 创建新的转账记录
+            from app_travel.domain.value_objects.expense_value_objects import SettlementTransfer
+            transfer_vo = SettlementTransfer(
+                from_user_id=from_user_id,
+                to_user_id=to_user_id,
+                amount=decimal_amount,
+                currency='CNY',
+                is_settled=True
+            )
+            transfer_po = SettlementTransferPO.from_domain(transfer_vo, trip_id)
+            expense_dao.create_settlement_transfer(transfer_po)
+        else:
+            # 更新现有记录
+            target_transfer.is_settled = True
+            from datetime import datetime
+            target_transfer.settled_at = datetime.utcnow()
+            expense_dao.update_settlement_transfer(target_transfer)
+        
+        session.commit()
+        
+        # 发布事件
+        event = SettlementMarkedEvent(
+            trip_id=trip_id,
+            from_user_id=from_user_id,
+            to_user_id=to_user_id,
+            amount=str(decimal_amount),
+            currency='CNY'
+        )
+        self._event_bus.publish(event)
+        
+        return True
+
+    # ==================== 模板管理 ====================
+    
+    def publish_template(
+        self,
+        trip_id: str,
+        author_id: str
+    ) -> Dict[str, Any]:
+        """发布行程为模板
+        
+        Args:
+            trip_id: 源行程ID
+            author_id: 模板作者ID
+            
+        Returns:
+            模板信息字典
+            
+        Raises:
+            ValueError: 如果行程不满足发布条件
+        """
+        from app_travel.domain.domain_service.template_service import TemplateService
+        from app_travel.infrastructure.database.repository_impl.template_repository_impl import TemplateRepositoryImpl
+        from app_travel.infrastructure.database.dao_impl.sqlalchemy_template_dao import SQLAlchemyTemplateDAO
+        from shared.database.core import get_db_session
+        
+        # 获取源行程
+        trip = self.get_trip(trip_id)
+        if not trip:
+            raise ValueError(f"Trip {trip_id} not found")
+        
+        # 创建模板（会验证状态和可见性）
+        template = TemplateService.create_from_trip(trip, author_id)
+        
+        # 持久化
+        session = get_db_session()
+        template_dao = SQLAlchemyTemplateDAO(session)
+        template_repo = TemplateRepositoryImpl(template_dao)
+        template_repo.save(template)
+        session.commit()
+        
+        return {
+            'id': template.id.value,
+            'name': template.name,
+            'description': template.description,
+            'source_trip_id': template.source_trip_id,
+            'author_id': template.author_id,
+            'duration_days': template.duration_days,
+            'tags': template.tags,
+            'activity_count': template.activity_count,
+            'created_at': template.created_at.isoformat()
+        }
+    
+    def list_templates(
+        self,
+        limit: int = 20,
+        offset: int = 0,
+        keyword: Optional[str] = None,
+        tag: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """浏览模板列表
+        
+        Args:
+            limit: 每页数量
+            offset: 偏移量
+            keyword: 关键词搜索（可选）
+            tag: 标签过滤（可选）
+            
+        Returns:
+            包含模板列表和总数的字典
+        """
+        from app_travel.infrastructure.database.repository_impl.template_repository_impl import TemplateRepositoryImpl
+        from app_travel.infrastructure.database.dao_impl.sqlalchemy_template_dao import SQLAlchemyTemplateDAO
+        from shared.database.core import get_db_session
+        
+        session = get_db_session()
+        template_dao = SQLAlchemyTemplateDAO(session)
+        template_repo = TemplateRepositoryImpl(template_dao)
+        
+        templates = template_repo.find_all(
+            limit=limit,
+            offset=offset,
+            keyword=keyword,
+            tag=tag
+        )
+        
+        total = template_repo.count_all(keyword=keyword, tag=tag)
+        
+        template_list = [
+            {
+                'id': t.id.value,
+                'name': t.name,
+                'description': t.description,
+                'author_id': t.author_id,
+                'duration_days': t.duration_days,
+                'tags': t.tags,
+                'activity_count': t.activity_count,
+                'created_at': t.created_at.isoformat()
+            }
+            for t in templates
+        ]
+        
+        return {
+            'templates': template_list,
+            'total': total,
+            'limit': limit,
+            'offset': offset
+        }
+    
+    def get_template(self, template_id: str) -> Optional[Dict[str, Any]]:
+        """获取模板详情
+        
+        Args:
+            template_id: 模板ID
+            
+        Returns:
+            模板详情字典，不存在返回 None
+        """
+        from app_travel.domain.value_objects.template_value_objects import TemplateId
+        from app_travel.infrastructure.database.repository_impl.template_repository_impl import TemplateRepositoryImpl
+        from app_travel.infrastructure.database.dao_impl.sqlalchemy_template_dao import SQLAlchemyTemplateDAO
+        from shared.database.core import get_db_session
+        
+        session = get_db_session()
+        template_dao = SQLAlchemyTemplateDAO(session)
+        template_repo = TemplateRepositoryImpl(template_dao)
+        
+        template = template_repo.find_by_id(TemplateId(template_id))
+        
+        if not template:
+            return None
+        
+        # 转换日程数据
+        days_data = []
+        for day_data in template.days_data:
+            activities = [
+                {
+                    'name': a.name,
+                    'activity_type': a.activity_type,
+                    'location_name': a.location_name,
+                    'latitude': a.latitude,
+                    'longitude': a.longitude,
+                    'address': a.address,
+                    'duration_minutes': a.duration_minutes,
+                    'cost_amount': a.cost_amount,
+                    'cost_currency': a.cost_currency,
+                    'notes': a.notes
+                }
+                for a in day_data.activities
+            ]
+            
+            days_data.append({
+                'day_number': day_data.day_number,
+                'theme': day_data.theme,
+                'activities': activities
+            })
+        
+        return {
+            'id': template.id.value,
+            'name': template.name,
+            'description': template.description,
+            'source_trip_id': template.source_trip_id,
+            'author_id': template.author_id,
+            'duration_days': template.duration_days,
+            'tags': template.tags,
+            'activity_count': template.activity_count,
+            'days_data': days_data,
+            'created_at': template.created_at.isoformat()
+        }
+    
+    def clone_from_template(
+        self,
+        template_id: str,
+        user_id: str,
+        start_date: date,
+        end_date: date
+    ) -> Trip:
+        """从模板克隆行程
+        
+        Args:
+            template_id: 模板ID
+            user_id: 新行程创建者ID
+            start_date: 新行程开始日期
+            end_date: 新行程结束日期
+            
+        Returns:
+            新创建的行程
+            
+        Raises:
+            ValueError: 如果模板不存在或日期无效
+        """
+        from app_travel.domain.value_objects.template_value_objects import TemplateId
+        from app_travel.domain.domain_service.template_service import TemplateService
+        from app_travel.infrastructure.database.repository_impl.template_repository_impl import TemplateRepositoryImpl
+        from app_travel.infrastructure.database.dao_impl.sqlalchemy_template_dao import SQLAlchemyTemplateDAO
+        from shared.database.core import get_db_session
+        
+        # 获取模板
+        session = get_db_session()
+        template_dao = SQLAlchemyTemplateDAO(session)
+        template_repo = TemplateRepositoryImpl(template_dao)
+        
+        template = template_repo.find_by_id(TemplateId(template_id))
+        if not template:
+            raise ValueError(f"Template {template_id} not found")
+        
+        # 克隆为新行程
+        trip = TemplateService.clone_to_trip(template, user_id, start_date, end_date)
+        
+        # 持久化
+        self._trip_repository.save(trip)
+        
+        # 发布事件
+        self._publish_events(trip)
+        
+        return trip
+    
+    def clone_from_trip(
+        self,
+        source_trip_id: str,
+        user_id: str,
+        start_date: date,
+        end_date: date
+    ) -> Trip:
+        """直接克隆公开行程
+        
+        Args:
+            source_trip_id: 源行程ID
+            user_id: 新行程创建者ID
+            start_date: 新行程开始日期
+            end_date: 新行程结束日期
+            
+        Returns:
+            新创建的行程
+            
+        Raises:
+            ValueError: 如果源行程不存在、不公开或日期无效
+        """
+        from app_travel.domain.domain_service.template_service import TemplateService
+        
+        # 获取源行程
+        source_trip = self.get_trip(source_trip_id)
+        if not source_trip:
+            raise ValueError(f"Trip {source_trip_id} not found")
+        
+        # 克隆行程
+        trip = TemplateService.clone_trip_directly(source_trip, user_id, start_date, end_date)
+        
+        # 持久化
+        self._trip_repository.save(trip)
+        
+        # 发布事件
+        self._publish_events(trip)
+        
+        return trip

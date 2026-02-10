@@ -562,3 +562,326 @@ def update_day_itinerary(trip_id, day_index):
     except Exception as e:
         traceback.print_exc()
         return jsonify({'error': 'Internal server error'}), 500
+
+
+# ==================== 费用管理 ====================
+
+@travel_bp.route('/trips/<trip_id>/expenses', methods=['POST'])
+def add_expense(trip_id):
+    """添加费用"""
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    data = request.get_json()
+    service = get_travel_service()
+    
+    try:
+        expense = service.add_expense(
+            trip_id=trip_id,
+            description=data['description'],
+            amount=float(data['amount']),
+            payer_id=data['payer_id'],
+            category=data.get('category', 'other'),
+            currency=data.get('currency', 'CNY'),
+            split_mode=data.get('split_mode', 'equal'),
+            participant_ids=data.get('participant_ids'),
+            exact_amounts=[float(a) for a in data['exact_amounts']] if data.get('exact_amounts') else None,
+            percentages=[float(p) for p in data['percentages']] if data.get('percentages') else None,
+            created_by=current_user_id
+        )
+        
+        return jsonify({
+            'id': expense.id,
+            'trip_id': expense.trip_id,
+            'description': expense.description,
+            'amount': str(expense.amount),
+            'currency': expense.currency,
+            'category': expense.category.value,
+            'payer_id': expense.payer_id,
+            'split_mode': expense.split_mode.value,
+            'shares': [
+                {
+                    'user_id': share.user_id,
+                    'amount': str(share.amount),
+                    'percentage': str(share.percentage) if share.percentage else None
+                }
+                for share in expense.shares
+            ],
+            'created_by': expense.created_by,
+            'created_at': expense.created_at.isoformat()
+        }), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@travel_bp.route('/trips/<trip_id>/expenses', methods=['GET'])
+def list_expenses(trip_id):
+    """获取费用列表"""
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    service = get_travel_service()
+    
+    try:
+        expenses = service.list_expenses(trip_id)
+        
+        return jsonify([
+            {
+                'id': expense.id,
+                'trip_id': expense.trip_id,
+                'description': expense.description,
+                'amount': str(expense.amount),
+                'currency': expense.currency,
+                'category': expense.category.value,
+                'payer_id': expense.payer_id,
+                'split_mode': expense.split_mode.value,
+                'shares': [
+                    {
+                        'user_id': share.user_id,
+                        'amount': str(share.amount),
+                        'percentage': str(share.percentage) if share.percentage else None
+                    }
+                    for share in expense.shares
+                ],
+                'created_by': expense.created_by,
+                'created_at': expense.created_at.isoformat()
+            }
+            for expense in expenses
+        ])
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@travel_bp.route('/trips/<trip_id>/expenses/<expense_id>', methods=['DELETE'])
+def delete_expense(trip_id, expense_id):
+    """删除费用"""
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    service = get_travel_service()
+    
+    try:
+        success = service.delete_expense(trip_id, expense_id, current_user_id)
+        
+        if success:
+            return '', 204
+        else:
+            return jsonify({'error': 'Expense not found'}), 404
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@travel_bp.route('/trips/<trip_id>/expenses/summary', methods=['GET'])
+def get_expense_summary(trip_id):
+    """获取费用汇总"""
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    service = get_travel_service()
+    
+    try:
+        summary = service.get_expense_summary(trip_id)
+        return jsonify(summary)
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@travel_bp.route('/trips/<trip_id>/settlement', methods=['GET'])
+def get_settlement(trip_id):
+    """获取结算方案"""
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    service = get_travel_service()
+    
+    try:
+        settlement = service.get_settlement(trip_id)
+        return jsonify(settlement)
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@travel_bp.route('/trips/<trip_id>/settlement/settle', methods=['PUT'])
+def mark_transfer_settled(trip_id):
+    """标记转账已结清"""
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    data = request.get_json()
+    service = get_travel_service()
+    
+    try:
+        success = service.mark_transfer_settled(
+            trip_id=trip_id,
+            from_user_id=data['from_user_id'],
+            to_user_id=data['to_user_id'],
+            amount=float(data['amount'])
+        )
+        
+        if success:
+            return jsonify({'message': 'Transfer marked as settled'})
+        else:
+            return jsonify({'error': 'Failed to mark transfer'}), 400
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+# ==================== 模板 API ====================
+
+@travel_bp.route('/trips/<trip_id>/publish-template', methods=['POST'])
+def publish_template(trip_id):
+    """发布行程为模板"""
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    service = get_travel_service()
+    
+    try:
+        template = service.publish_template(
+            trip_id=trip_id,
+            author_id=current_user_id
+        )
+        return jsonify(template), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@travel_bp.route('/templates', methods=['GET'])
+def list_templates():
+    """浏览模板列表"""
+    service = get_travel_service()
+    
+    # 获取查询参数
+    limit = request.args.get('limit', 20, type=int)
+    offset = request.args.get('offset', 0, type=int)
+    keyword = request.args.get('keyword', None, type=str)
+    tag = request.args.get('tag', None, type=str)
+    
+    try:
+        result = service.list_templates(
+            limit=limit,
+            offset=offset,
+            keyword=keyword,
+            tag=tag
+        )
+        return jsonify(result)
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@travel_bp.route('/templates/<template_id>', methods=['GET'])
+def get_template(template_id):
+    """获取模板详情"""
+    service = get_travel_service()
+    
+    try:
+        template = service.get_template(template_id)
+        if not template:
+            return jsonify({'error': 'Template not found'}), 404
+        return jsonify(template)
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@travel_bp.route('/templates/<template_id>/clone', methods=['POST'])
+def clone_from_template(template_id):
+    """从模板克隆行程"""
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    data = request.get_json()
+    service = get_travel_service()
+    
+    # 验证必需字段
+    if 'start_date' not in data or 'end_date' not in data:
+        return jsonify({'error': 'start_date and end_date are required'}), 400
+    
+    try:
+        from datetime import datetime
+        start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
+        end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
+        
+        trip = service.clone_from_template(
+            template_id=template_id,
+            user_id=current_user_id,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        return jsonify({
+            'id': trip.id.value,
+            'name': trip.name.value,
+            'description': trip.description.value,
+            'start_date': str(trip.date_range.start_date),
+            'end_date': str(trip.date_range.end_date),
+            'status': trip.status.value,
+            'visibility': trip.visibility.value
+        }), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@travel_bp.route('/trips/<trip_id>/clone', methods=['POST'])
+def clone_from_trip(trip_id):
+    """直接克隆公开行程"""
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    data = request.get_json()
+    service = get_travel_service()
+    
+    # 验证必需字段
+    if 'start_date' not in data or 'end_date' not in data:
+        return jsonify({'error': 'start_date and end_date are required'}), 400
+    
+    try:
+        from datetime import datetime
+        start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
+        end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
+        
+        trip = service.clone_from_trip(
+            source_trip_id=trip_id,
+            user_id=current_user_id,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        return jsonify({
+            'id': trip.id.value,
+            'name': trip.name.value,
+            'description': trip.description.value,
+            'start_date': str(trip.date_range.start_date),
+            'end_date': str(trip.date_range.end_date),
+            'status': trip.status.value,
+            'visibility': trip.visibility.value
+        }), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
