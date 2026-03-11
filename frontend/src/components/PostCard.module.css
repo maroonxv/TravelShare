@@ -1,149 +1,160 @@
 .postCard {
-    margin-bottom: var(--spacing-lg);
     display: flex;
     flex-direction: column;
-    /* padding 由 Card 组件内部处理，这里不需要双重 padding */
 }
 
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--spacing-sm);
-}
-
-.userInfo {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-}
-
-.avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--color-social);
-    color: #121212;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    flex-shrink: 0;
-}
-
-.username {
-    font-weight: 600;
-    color: var(--text-primary);
-    font-size: 0.95rem;
-}
-
-.date {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-}
-
-/* 媒体区域 - 统一高度 */
 .mediaArea {
-    /* 抵消 Card 组件的内边距 */
-    margin: calc(-1 * var(--spacing-lg)) calc(-1 * var(--spacing-lg)) var(--spacing-md) calc(-1 * var(--spacing-lg));
-    height: 200px;
+    margin: -1.25rem -1.25rem 1rem;
+    height: 240px;
     position: relative;
     overflow: hidden;
-    background-color: var(--bg-primary);
+    background: #181a17;
+    border-bottom: 1px solid rgba(233, 226, 207, 0.08);
 }
 
 .mediaCover {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s;
-}
-
-.mediaArea:hover .mediaCover {
-    transform: scale(1.05);
 }
 
 .imageBadge {
     position: absolute;
-    bottom: 8px;
-    right: 8px;
-    background: rgba(0, 0, 0, 0.6);
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    display: flex;
+    right: 0.85rem;
+    bottom: 0.85rem;
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
-    z-index: 10;
+    gap: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(18, 19, 18, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    font-size: 0.78rem;
 }
 
-/* 无图占位 */
 .placeholder {
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, var(--color-social) 0%, #3b82f6 100%);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    padding: 1.5rem;
-    text-align: center;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    padding: 1.25rem;
+    background:
+        linear-gradient(180deg, rgba(127, 174, 166, 0.08) 0%, rgba(204, 155, 87, 0.12) 100%);
 }
 
 .placeholderIcon {
-    opacity: 0.8;
-    margin-bottom: 0.5rem;
+    color: var(--color-travel);
 }
 
 .placeholderText {
-    font-size: 1.2rem;
-    font-weight: bold;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    
+    max-width: 24ch;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.35;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
-/* 文本内容区 */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+}
+
+.userInfo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: rgba(127, 174, 166, 0.14);
+    color: #d4ece6;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.avatarImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.userMeta {
+    min-width: 0;
+}
+
+.username {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.96rem;
+}
+
+.date {
+    font-size: 0.82rem;
+    color: var(--text-tertiary);
+}
+
+.deleteBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    color: var(--text-tertiary);
+    transition: background-color 140ms ease, color 140ms ease;
+}
+
+.deleteBtn:hover {
+    background: rgba(193, 106, 104, 0.14);
+    color: #f2cbc8;
+}
+
 .content {
-    margin-bottom: var(--spacing-sm);
-    flex: 1; /* 让内容区占据剩余空间 */
     display: flex;
     flex-direction: column;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
 }
 
 .titleLink {
-    text-decoration: none;
+    width: fit-content;
 }
 
 .title {
-    margin: 0 0 4px;
+    margin: 0;
     color: var(--text-primary);
     font-size: 1.1rem;
     line-height: 1.4;
-    transition: color 0.2s;
-    
-    /* 单行截断 */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.title:hover {
-    color: var(--color-social);
 }
 
 .textContainer {
-    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
 }
 
 .text {
     color: var(--text-secondary);
-    line-height: 1.5;
+    line-height: 1.7;
     font-size: 0.95rem;
     margin: 0;
 }
@@ -156,90 +167,105 @@
 }
 
 .expandBtn {
-    background: none;
-    border: none;
+    width: fit-content;
     color: var(--color-social);
     padding: 0;
-    margin-top: 4px;
     font-size: 0.85rem;
-    cursor: pointer;
-    font-weight: 500;
+    font-weight: 600;
 }
 
-.expandBtn:hover {
+.tripLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--color-travel);
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.tripLink a:hover {
     text-decoration: underline;
+}
+
+.tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 0.7rem;
+    border-radius: 999px;
+    background: rgba(127, 174, 166, 0.1);
+    border: 1px solid rgba(127, 174, 166, 0.2);
+    color: #d4ece6;
+    font-size: 0.82rem;
+    font-weight: 600;
 }
 
 .actions {
     display: flex;
-    border-top: 1px solid var(--border-color);
-    padding-top: var(--spacing-sm);
-    margin-top: auto; /* 底部对齐 */
-    gap: var(--spacing-sm);
+    gap: 0.5rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid rgba(233, 226, 207, 0.08);
 }
 
 .actionBtn {
     flex: 1;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 0.45rem;
+    min-height: 38px;
+    padding: 0 0.8rem;
+    border-radius: 10px;
     color: var(--text-secondary);
-    transition: all 0.2s;
-    padding: 0.5rem;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    border: none;
-    cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease;
     font-size: 0.9rem;
+    font-weight: 600;
 }
 
 .actionBtn:hover {
-    color: var(--color-social);
-    background-color: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
 }
 
-.liked {
-    color: #ef4444; /* red-500 */
+.actionLiked {
+    color: #efb4b3;
 }
 
-.liked:hover {
-    color: #dc2626; /* red-600 */
-    background-color: rgba(239, 68, 68, 0.1);
-}
-
-/* 导航按钮 */
 .navBtn {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(0, 0, 0, 0.4);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    transition: background-color 0.2s, opacity 0.2s;
-    opacity: 0; /* 默认隐藏 */
-    z-index: 20;
-}
-
-.mediaArea:hover .navBtn {
-    opacity: 1;
-}
-
-.navBtn:hover {
-    background: rgba(0, 0, 0, 0.7);
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: rgba(18, 19, 18, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
 }
 
 .navBtnPrev {
-    left: 8px;
+    left: 0.8rem;
 }
 
 .navBtnNext {
-    right: 8px;
+    right: 0.8rem;
+}
+
+@media (max-width: 640px) {
+    .mediaArea {
+        height: 210px;
+    }
+
+    .actions {
+        flex-direction: column;
+    }
 }

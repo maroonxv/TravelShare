@@ -2,45 +2,63 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    margin-bottom: 1rem;
 }
 
 .label {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
+    font-size: 0.9rem;
     font-weight: 500;
-    text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    color: var(--text-secondary);
+}
+
+.field {
+    position: relative;
+}
+
+.icon {
+    position: absolute;
+    top: 50%;
+    left: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+    transform: translateY(-50%);
+    pointer-events: none;
 }
 
 .input {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 100%;
+    min-height: 44px;
+    padding: 0.75rem 0.9rem;
+    background: #161815;
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
-    padding: 0.75rem 1rem;
     color: var(--text-primary);
-    font-size: 1rem;
-    transition: all 0.2s ease;
+    font-size: 0.95rem;
+    line-height: 1.35;
     outline: none;
-    backdrop-filter: blur(4px);
+    transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.withIcon {
+    padding-left: 2.8rem;
 }
 
 .input:focus {
-    border-color: var(--color-primary);
-    background: rgba(0, 0, 0, 0.3);
-    box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
+    border-color: rgba(204, 155, 87, 0.42);
+    box-shadow: 0 0 0 3px rgba(204, 155, 87, 0.12);
 }
 
 .input::placeholder {
-    color: rgba(148, 163, 184, 0.5);
+    color: var(--text-tertiary);
 }
 
 .errorInput {
-    border-color: #ef4444;
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+    border-color: rgba(193, 106, 104, 0.6);
+    box-shadow: 0 0 0 3px rgba(193, 106, 104, 0.12);
 }
 
 .errorMessage {
-    color: #ef4444;
-    font-size: 0.8rem;
-    text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    color: #e8a8a5;
+    font-size: 0.85rem;
 }

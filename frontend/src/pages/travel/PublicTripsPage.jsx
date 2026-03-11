@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { getPublicTrips } from '../../api/travel';
 import TripCard from '../../components/TripCard';
 import styles from './TravelList.module.css';
@@ -12,27 +12,28 @@ const PublicTripsPage = ({ searchQuery }) => {
             setLoading(true);
             try {
                 const data = await getPublicTrips(searchQuery);
-                setTrips(Array.isArray(data) ? data : (data.trips || []));
+                setTrips(Array.isArray(data) ? data : data.trips || []);
             } catch (error) {
-                console.error("Failed to fetch public trips", error);
+                console.error('Failed to fetch public trips', error);
             } finally {
                 setLoading(false);
             }
         };
+
         fetchTrips();
     }, [searchQuery]);
 
     return (
         <div>
             {loading ? (
-                <div className={styles.loading}>加载旅行中...</div>
+                <div className={styles.loading}>正在加载公开行程...</div>
             ) : (
                 <div className={styles.grid}>
                     {trips.length > 0 ? (
-                        trips.map(trip => <TripCard key={trip.id} trip={trip} />)
+                        trips.map((trip) => <TripCard key={trip.id} trip={trip} />)
                     ) : (
                         <div className={styles.empty}>
-                            {searchQuery ? '没有找到匹配的旅行。' : '暂无公开旅行。'}
+                            {searchQuery ? '没有找到匹配的公开行程。' : '暂时还没有公开行程。'}
                         </div>
                     )}
                 </div>

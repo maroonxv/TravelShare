@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, X, Search } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 import { getFeed } from '../../api/social';
 import PostCard from '../../components/PostCard';
 import Button from '../../components/Button';
@@ -13,10 +13,7 @@ const FeedPage = () => {
     const currentTag = searchParams.get('tag');
     const currentSearch = searchParams.get('search') || '';
     const [tempSearch, setTempSearch] = useState(currentSearch);
-    
-    // New: Filter Tabs State
-    const [activeTab, setActiveTab] = useState('recommend'); // recommend, latest, hot
-
+    const [activeTab, setActiveTab] = useState('recommend');
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [offset, setOffset] = useState(0);
@@ -32,29 +29,21 @@ const FeedPage = () => {
             setLoading(true);
             try {
                 const tags = currentTag ? [currentTag] : [];
-                // Pass activeTab to API if supported later. For now just reloading.
-                // potentially: getFeed(LIMIT, 0, tags, currentSearch, activeTab)
                 const data = await getFeed(LIMIT, 0, tags, currentSearch);
-                const newPosts = Array.isArray(data) ? data : (data.posts || []);
-                
-                // Client-side simple sort for MVP demo if needed, 
-                // but usually better to rely on server. 
-                // Let's just use server order for 'recommend' and 'latest'.
-                // For 'hot', we could try to sort if we had all data, but with pagination it's tricky.
-                // So we just display the data as is, assuming server handles it or will handle it.
-                
-                setPosts(newPosts);
+                const nextPosts = Array.isArray(data) ? data : data.posts || [];
+                setPosts(nextPosts);
                 setOffset(LIMIT);
-                setHasMore(newPosts.length === LIMIT);
+                setHasMore(nextPosts.length === LIMIT);
             } catch (error) {
                 console.error('Failed to fetch feed', error);
-                toast.error("获取动态失败");
+                toast.error('获取动态失败');
             } finally {
                 setLoading(false);
             }
         };
+
         loadInitial();
-    }, [currentTag, currentSearch, activeTab]); // Reload when tab changes
+    }, [currentTag, currentSearch, activeTab]);
 
     const handleLoadMore = async () => {
         if (loading) return;
@@ -62,18 +51,18 @@ const FeedPage = () => {
         try {
             const tags = currentTag ? [currentTag] : [];
             const data = await getFeed(LIMIT, offset, tags, currentSearch);
-            const newPosts = Array.isArray(data) ? data : (data.posts || []);
+            const nextPosts = Array.isArray(data) ? data : data.posts || [];
 
-            setPosts(prev => {
-                const existingIds = new Set(prev.map(p => p.id));
-                const uniqueNewPosts = newPosts.filter(p => !existingIds.has(p.id));
+            setPosts((prev) => {
+                const existingIds = new Set(prev.map((post) => post.id));
+                const uniqueNewPosts = nextPosts.filter((post) => !existingIds.has(post.id));
                 return [...prev, ...uniqueNewPosts];
             });
-            setOffset(prev => prev + LIMIT);
-            setHasMore(newPosts.length === LIMIT);
+            setOffset((prev) => prev + LIMIT);
+            setHasMore(nextPosts.length === LIMIT);
         } catch (error) {
             console.error('Failed to fetch more posts', error);
-            toast.error("加载更多失败");
+            toast.error('加载更多失败');
         } finally {
             setLoading(false);
         }
@@ -81,92 +70,106 @@ const FeedPage = () => {
 
     const handleSearch = (e) => {
         e.preventDefault();
-        setSearchParams(prev => {
-            const newParams = new URLSearchParams(prev);
-            if (tempSearch) newParams.set('search', tempSearch);
-            else newParams.delete('search');
-            return newParams;
+        setSearchParams((prev) => {
+            const nextParams = new URLSearchParams(prev);
+            if (tempSearch) {
+                nextParams.set('search', tempSearch);
+            } else {
+                nextParams.delete('search');
+            }
+            return nextParams;
         });
     };
 
     const clearTag = () => {
-        setSearchParams(prev => {
-            const newParams = new URLSearchParams(prev);
-            newParams.delete('tag');
-            return newParams;
+        setSearchParams((prev) => {
+            const nextParams = new URLSearchParams(prev);
+            nextParams.delete('tag');
+            return nextParams;
         });
     };
 
-    const renderHeader = () => (
-        <div className={styles.header}>
-            <div className={styles.topRow}>
-                <div className={styles.titleContainer}>
-                    <h1 className={styles.title}>
-                        {currentTag ? `标签: #${currentTag}` : '社区动态'}
-                    </h1>
-                    {currentTag && (
-                        <button onClick={clearTag} className={styles.clearBtn}>
-                            <X size={20} />
-                        </button>
-                    )}
-                </div>
-                <Link to="/social/create">
-                    <Button variant="social">
-                        <Plus size={18} style={{ marginRight: '0.5rem' }} />
-                        发布
-                    </Button>
-                </Link>
-            </div>
-
-            <div className={styles.searchRow}>
-                <form onSubmit={handleSearch} className={styles.searchForm}>
-                    <Search size={16} className={styles.searchIcon} />
-                    <input 
-                        type="text"
-                        value={tempSearch}
-                        onChange={(e) => setTempSearch(e.target.value)}
-                        placeholder="搜索帖子..."
-                        className={styles.searchInput}
-                    />
-                </form>
-            </div>
-
-            {!currentTag && !currentSearch && (
-                <div className={styles.filterTabs}>
-                    <button 
-                        className={`${styles.filterTab} ${activeTab === 'recommend' ? styles.activeTab : ''}`}
-                        onClick={() => setActiveTab('recommend')}
-                    >
-                        推荐
-                    </button>
-                    <button 
-                        className={`${styles.filterTab} ${activeTab === 'latest' ? styles.activeTab : ''}`}
-                        onClick={() => setActiveTab('latest')}
-                    >
-                        最新
-                    </button>
-                    <button 
-                        className={`${styles.filterTab} ${activeTab === 'hot' ? styles.activeTab : ''}`}
-                        onClick={() => setActiveTab('hot')}
-                    >
-                        热门
-                    </button>
-                </div>
-            )}
-        </div>
-    );
+    const headerTitle = currentTag ? `标签 #${currentTag}` : currentSearch ? '搜索结果' : '社区动态';
+    const headerDescription = currentTag
+        ? '查看同一标签下的旅行内容。'
+        : currentSearch
+          ? `关键词“${currentSearch}”相关的内容。`
+          : '按推荐、最新和热门浏览大家的旅行分享。';
 
     return (
         <div className={styles.container}>
-            {renderHeader()}
+            <header className={styles.header}>
+                <div className={styles.titleRow}>
+                    <div className={styles.titleBlock}>
+                        <h1 className={styles.title}>{headerTitle}</h1>
+                        <p className={styles.subtitle}>{headerDescription}</p>
+                    </div>
+
+                    <Link to="/social/create">
+                        <Button icon={<Plus size={16} />} variant="social">
+                            发布动态
+                        </Button>
+                    </Link>
+                </div>
+
+                <div className={styles.toolsRow}>
+                    <form onSubmit={handleSearch} className={styles.searchForm}>
+                        <Search size={16} className={styles.searchIcon} />
+                        <input
+                            type="text"
+                            value={tempSearch}
+                            onChange={(e) => setTempSearch(e.target.value)}
+                            placeholder="搜索标题、内容或标签"
+                            className={styles.searchInput}
+                        />
+                    </form>
+
+                    {currentTag && (
+                        <button onClick={clearTag} className={styles.clearBtn} type="button">
+                            <X size={16} />
+                            <span>清除标签</span>
+                        </button>
+                    )}
+                </div>
+
+                {!currentTag && !currentSearch && (
+                    <div className={styles.filterTabs}>
+                        <button
+                            className={`${styles.filterTab} ${activeTab === 'recommend' ? styles.activeTab : ''}`}
+                            onClick={() => setActiveTab('recommend')}
+                            type="button"
+                        >
+                            推荐
+                        </button>
+                        <button
+                            className={`${styles.filterTab} ${activeTab === 'latest' ? styles.activeTab : ''}`}
+                            onClick={() => setActiveTab('latest')}
+                            type="button"
+                        >
+                            最新
+                        </button>
+                        <button
+                            className={`${styles.filterTab} ${activeTab === 'hot' ? styles.activeTab : ''}`}
+                            onClick={() => setActiveTab('hot')}
+                            type="button"
+                        >
+                            热门
+                        </button>
+                    </div>
+                )}
+            </header>
 
             <div className={styles.feed}>
-                {posts.map(post => (
+                {posts.map((post) => (
                     <PostCard key={post.id} post={post} />
                 ))}
             </div>
 
-            {loading && <div className={styles.loading}><LoadingSpinner size="medium" /></div>}
+            {loading && (
+                <div className={styles.loading}>
+                    <LoadingSpinner size="medium" />
+                </div>
+            )}
 
             {!loading && hasMore && (
                 <div className={styles.loadMore}>
@@ -176,13 +179,11 @@ const FeedPage = () => {
                 </div>
             )}
 
-            {!loading && !hasMore && posts.length > 0 && (
-                <div className={styles.endMessage}>到底啦！</div>
-            )}
+            {!loading && !hasMore && posts.length > 0 && <div className={styles.endMessage}>已经到底了</div>}
 
             {!loading && posts.length === 0 && (
                 <div className={styles.endMessage}>
-                    {currentTag ? '该标签下暂无帖子' : '还没有帖子，快来抢沙发！'}
+                    {currentTag ? '这个标签下还没有内容。' : '暂时还没有可展示的动态。'}
                 </div>
             )}
         </div>

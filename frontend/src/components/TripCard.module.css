@@ -1,35 +1,28 @@
-/* Using PostCard.module.css styles as reference for consistency */
+.link {
+    display: block;
+}
 
 .card {
-    /* Base styles from Card.module.css are applied by wrapper, 
-       but we add specific hover effects here if needed */
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    cursor: pointer;
-    overflow: hidden; /* Ensure image corners respect border radius */
+    height: 100%;
+    transition: border-color 140ms ease, transform 140ms ease;
 }
 
 .card:hover {
     transform: translateY(-2px);
 }
 
-/* Image section - like a cover image */
 .imageContainer {
-    height: 160px;
-    background-color: #1e293b; /* Fallback */
-    position: relative;
+    height: 180px;
+    margin: -1.25rem -1.25rem 1rem;
     overflow: hidden;
-    margin: -1.5rem -1.5rem 1rem -1.5rem; /* Negate padding from Card */
+    background: #181a17;
+    border-bottom: 1px solid rgba(233, 226, 207, 0.08);
 }
 
 .coverImage {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.card:hover .coverImage {
-    transform: scale(1.05);
 }
 
 .imagePlaceholder {
@@ -38,67 +31,75 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    color: rgba(244, 240, 230, 0.16);
     font-size: 2.5rem;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.05);
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    text-transform: uppercase;
+    background:
+        linear-gradient(180deg, rgba(204, 155, 87, 0.08) 0%, rgba(127, 174, 166, 0.08) 100%);
 }
 
 .content {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.8rem;
 }
 
 .header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 1rem;
+    gap: 0.75rem;
 }
 
 .title {
     margin: 0;
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: 1.08rem;
+    font-weight: 700;
     color: var(--text-primary);
     line-height: 1.4;
 }
 
 .status {
-    font-size: 0.7rem;
-    padding: 0.2rem 0.6rem;
-    border-radius: 9999px; /* Pill shape */
-    text-transform: capitalize;
-    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 0.65rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.04);
     flex-shrink: 0;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid transparent;
 }
 
 .planning {
-    color: #60a5fa;
-    background-color: rgba(59, 130, 246, 0.1);
-    border-color: rgba(59, 130, 246, 0.2);
+    color: #f5d8ad;
+    background: rgba(204, 155, 87, 0.1);
+    border-color: rgba(204, 155, 87, 0.2);
 }
 
-.ongoing {
-    color: #4ade80;
-    background-color: rgba(34, 197, 94, 0.1);
-    border-color: rgba(34, 197, 94, 0.2);
+.in_progress {
+    color: #d4ece6;
+    background: rgba(127, 174, 166, 0.1);
+    border-color: rgba(127, 174, 166, 0.2);
 }
 
 .completed {
-    color: #94a3b8;
-    background-color: rgba(148, 163, 184, 0.1);
-    border-color: rgba(148, 163, 184, 0.2);
+    color: var(--text-secondary);
+}
+
+.cancelled {
+    color: #f2cbc8;
+    background: rgba(193, 106, 104, 0.1);
+    border-color: rgba(193, 106, 104, 0.2);
 }
 
 .description {
+    margin: 0;
     color: var(--text-secondary);
-    font-size: 0.9rem;
-    line-height: 1.5;
+    font-size: 0.92rem;
+    line-height: 1.65;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -107,30 +108,16 @@
 
 .meta {
     display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-top: auto;
-    padding-top: 0.5rem;
-    border-top: 1px solid var(--border-color);
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid rgba(233, 226, 207, 0.08);
 }
 
 .metaItem {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.45rem;
     color: var(--text-secondary);
-    font-size: 0.85rem;
-}
-
-.dates {
-    width: 100%;
-    margin-top: 0.25rem;
-    font-size: 0.85rem;
-    color: var(--text-tertiary); /* Muted color */
-}
-
-.linkOverlay {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
+    font-size: 0.88rem;
 }

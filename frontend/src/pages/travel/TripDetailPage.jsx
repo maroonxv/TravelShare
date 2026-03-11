@@ -70,7 +70,7 @@ const RawMap = ({ center, markers, polylines, transitLabels }) => {
             const validOverlays = [];
 
             // Add Markers
-            markers.forEach((m, i) => {
+            markers.forEach((m) => {
                 if (m.position && !isNaN(m.position[0]) && !isNaN(m.position[1])) {
                     try {
                         const marker = new window.AMap.Marker({
@@ -115,7 +115,7 @@ const RawMap = ({ center, markers, polylines, transitLabels }) => {
                 transitLabels.forEach(l => {
                     if (l.position && !isNaN(l.position[0]) && !isNaN(l.position[1])) {
                         try {
-                            const text = new window.AMap.Text({
+                            new window.AMap.Text({
                                 text: l.text,
                                 position: l.position,
                                 anchor: 'center',

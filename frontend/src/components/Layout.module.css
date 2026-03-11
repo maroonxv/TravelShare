@@ -1,204 +1,332 @@
-.container {
+.shell {
     display: flex;
-    height: 100vh;
-    width: 100vw;
-    overflow: hidden;
-    background: transparent; /* Rely on body background */
+    min-height: 100vh;
 }
 
 .sidebar {
-    width: 240px;
-    background: rgba(5, 8, 22, 0.6); /* Semi-transparent dark */
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-right: 1px solid var(--border-color);
+    width: var(--sidebar-width);
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    padding: var(--spacing-md);
-    flex-shrink: 0;
-    z-index: 10;
-    transition: width 0.3s ease;
+    background: rgba(20, 22, 20, 0.96);
+    border-right: 1px solid var(--border-color);
+    padding: 1.25rem 1rem;
 }
 
-.sidebar.collapsed {
-    width: 80px;
-    padding: var(--spacing-md) var(--spacing-sm);
+.brandBlock {
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(233, 226, 207, 0.08);
 }
 
-.header {
+.brand {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: var(--spacing-xl);
-    padding: 0 var(--spacing-sm);
+    gap: 0.85rem;
 }
 
-.logo {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    background: linear-gradient(135deg, #6366F1, #06B6D4);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.3));
-    white-space: nowrap;
-    overflow: hidden;
-    transition: opacity 0.2s;
-}
-
-.collapsed .logo {
-    font-size: 1.2rem;
-    text-align: center;
-    width: 100%;
-}
-
-.collapseBtn {
-    color: var(--text-secondary);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border-color);
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    display: flex;
+.brandMark {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: rgba(204, 155, 87, 0.14);
+    border: 1px solid rgba(204, 155, 87, 0.28);
+    color: #f0d4a7;
+    font-weight: 700;
+    letter-spacing: 0.04em;
 }
 
-.collapsed .collapseBtn {
-    position: absolute;
-    right: -12px;
-    top: 24px;
-    background: #0f172a; /* Match body bg */
-    z-index: 20;
+.brandText {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
 }
 
-.collapseBtn:hover {
+.brandText strong {
+    font-size: 1rem;
+    font-weight: 700;
     color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.1);
+}
+
+.brandText span {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
 }
 
 .nav {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-xs);
+    gap: 0.35rem;
+    padding: 1rem 0;
     flex: 1;
 }
 
 .link {
     display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-    padding: var(--spacing-md);
-    border-radius: var(--radius-md);
-    color: var(--text-secondary);
-    transition: all 0.3s ease;
-    font-weight: 500;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 0.85rem 0.9rem;
+    border-radius: 12px;
     border: 1px solid transparent;
-    overflow: hidden;
-    white-space: nowrap;
-}
-
-.collapsed .link {
-    justify-content: center;
-    padding: var(--spacing-md) 0;
-}
-
-.linkText {
-    transition: opacity 0.2s;
-}
-
-.collapsed .linkText {
-    display: none;
+    color: var(--text-secondary);
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
 .link:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.035);
+    border-color: rgba(255, 255, 255, 0.06);
     color: var(--text-primary);
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
 }
 
-.activeSocial {
-    background: linear-gradient(90deg, rgba(14, 165, 233, 0.15), transparent);
-    color: #0EA5E9;
-    border-left: 2px solid #0EA5E9;
-    text-shadow: 0 0 8px rgba(14, 165, 233, 0.4);
+.linkIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    flex-shrink: 0;
 }
 
-.activeTravel {
-    background: linear-gradient(90deg, rgba(6, 182, 212, 0.15), transparent);
-    color: #06B6D4;
-    border-left: 2px solid #06B6D4;
-    text-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
+.linkBody {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
 }
 
-.activeChat {
-    background: linear-gradient(90deg, rgba(99, 102, 241, 0.15), transparent);
-    color: #6366F1;
-    border-left: 2px solid #6366F1;
-    text-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+.linkLabel {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: currentColor;
 }
 
-.activeAi {
-    background: linear-gradient(90deg, rgba(168, 85, 247, 0.15), transparent);
-    color: #A855F7;
-    border-left: 2px solid #A855F7;
-    text-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
+.linkHint {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    line-height: 1.35;
 }
 
-.activeProfile {
-    background: linear-gradient(90deg, rgba(248, 250, 252, 0.1), transparent);
-    color: #f8fafc;
-    border-left: 2px solid #f8fafc;
+.active {
+    background: rgba(255, 255, 255, 0.045);
+    border-color: rgba(255, 255, 255, 0.08);
 }
 
-.collapsed .link.activeSocial,
-.collapsed .link.activeTravel,
-.collapsed .link.activeChat,
-.collapsed .link.activeAi,
-.collapsed .link.activeProfile {
-    border-left: none; /* Remove left border in collapsed mode or keep it? Maybe keep it. */
-    border-left: 2px solid currentColor;
+.active .linkHint {
+    color: var(--text-secondary);
 }
 
-.footer {
-    margin-top: auto;
-    padding-top: var(--spacing-md);
-    border-top: 1px solid var(--border-color);
+.social.active {
+    color: var(--color-social);
 }
 
-.logoutBtn {
+.travel.active {
+    color: var(--color-travel);
+}
+
+.chat.active {
+    color: #c6c1e8;
+}
+
+.ai.active {
+    color: var(--color-ai);
+}
+
+.sidebarFooter {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(233, 226, 207, 0.08);
+}
+
+.profileCard {
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
-    width: 100%;
-    padding: var(--spacing-md);
-    color: var(--text-secondary);
-    border-radius: var(--radius-md);
-    transition: all 0.2s;
-    background: transparent;
+    gap: 0.85rem;
+    padding: 0.8rem 0.85rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid transparent;
-    white-space: nowrap;
-    overflow: hidden;
+    transition: background-color 140ms ease, border-color 140ms ease;
 }
 
-.collapsed .logoutBtn {
+.profileCard:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+.profileAvatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(127, 174, 166, 0.14);
+    color: #d4ece6;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
+    font-weight: 700;
+    overflow: hidden;
+    flex-shrink: 0;
 }
 
+.profileAvatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profileBody {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.profileName {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.profileRole {
+    color: var(--text-tertiary);
+    font-size: 0.8rem;
+}
+
+.adminLink,
+.logoutBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 40px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    background: transparent;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.adminLink:hover,
 .logoutBtn:hover {
-    background-color: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-    border-color: rgba(239, 68, 68, 0.2);
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+}
+
+.viewport {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem 1.75rem;
+    border-bottom: 1px solid rgba(233, 226, 207, 0.08);
+    background: rgba(18, 19, 18, 0.88);
+    backdrop-filter: blur(8px);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.pageMeta h1 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.pageMeta p {
+    margin: 0.3rem 0 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.topbarProfile {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.85rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.mobileNav {
+    display: none;
 }
 
 .main {
     flex: 1;
-    background: transparent; /* See through to body gradient */
     overflow-y: auto;
-    overflow-x: hidden;
-    position: relative;
+}
+
+.content {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 1.5rem 1.75rem 2rem;
+}
+
+@media (max-width: 960px) {
+    .shell {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        display: none;
+    }
+
+    .topbar {
+        position: static;
+        padding: 1rem;
+    }
+
+    .pageMeta p {
+        display: none;
+    }
+
+    .mobileNav {
+        display: flex;
+        gap: 0.5rem;
+        overflow-x: auto;
+        padding: 0.85rem 1rem 0;
+    }
+
+    .mobileLink {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.7rem 0.9rem;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text-secondary);
+        white-space: nowrap;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .mobileActive {
+        color: var(--text-primary);
+        border-color: var(--border-strong);
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    .content {
+        padding: 1rem;
+    }
 }

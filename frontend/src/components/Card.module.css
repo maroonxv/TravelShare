@@ -1,36 +1,36 @@
 .card {
-    background: var(--bg-secondary);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border-radius: var(--radius-lg);
+    background: linear-gradient(180deg, rgba(30, 33, 29, 0.96) 0%, rgba(25, 27, 24, 0.96) 100%);
     border: 1px solid var(--border-color);
-    box-shadow: var(--glass-shadow);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--surface-shadow-soft);
     overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .card:hover {
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: var(--border-strong);
 }
 
 .header {
-    padding: var(--spacing-lg);
-    border-bottom: 1px solid var(--border-color);
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    background: rgba(255, 255, 255, 0.02);
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(233, 226, 207, 0.08);
 }
 
 .title {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
     color: var(--text-primary);
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+.action {
+    flex-shrink: 0;
 }
 
 .content {
-    padding: var(--spacing-lg);
+    padding: 1.25rem;
 }

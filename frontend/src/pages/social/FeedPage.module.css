@@ -1,34 +1,49 @@
 .container {
-    max-width: 680px; /* 紧凑布局核心 */
+    max-width: 760px;
     margin: 0 auto;
-    padding: var(--spacing-lg) var(--spacing-md);
 }
 
 .header {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-lg);
-    /* 移除原有的大边框和 padding，让界面更清爽 */
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding: 1.25rem;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    background: rgba(27, 29, 26, 0.9);
 }
 
-.topRow {
+.titleRow {
     display: flex;
+    align-items: flex-start;
     justify-content: space-between;
-    align-items: center;
+    gap: 1rem;
+}
+
+.titleBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
 }
 
 .title {
     margin: 0;
-    color: var(--color-social);
-    font-size: 1.5rem; /* 减小标题字号 */
+    color: var(--text-primary);
+    font-size: 1.5rem;
     font-weight: 700;
 }
 
-.searchRow {
+.subtitle {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.toolsRow {
     display: flex;
-    gap: var(--spacing-md);
     align-items: center;
+    gap: 0.75rem;
 }
 
 .searchForm {
@@ -36,50 +51,68 @@
     position: relative;
 }
 
+.searchIcon {
+    position: absolute;
+    left: 0.9rem;
+    top: 50%;
+    color: var(--text-tertiary);
+    transform: translateY(-50%);
+}
+
 .searchInput {
     width: 100%;
-    padding: 0.6rem 0.6rem 0.6rem 2.5rem;
-    border-radius: 20px; /* 圆角更圆润 */
+    min-height: 44px;
+    padding: 0.75rem 0.9rem 0.75rem 2.8rem;
+    border-radius: 10px;
     border: 1px solid var(--border-color);
-    background-color: rgba(255, 255, 255, 0.05);
+    background: #161815;
     color: var(--text-primary);
     font-size: 0.95rem;
     outline: none;
-    transition: all 0.2s;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .searchInput:focus {
-    border-color: var(--color-social);
-    background-color: rgba(0, 0, 0, 0.2);
+    border-color: rgba(127, 174, 166, 0.4);
+    box-shadow: 0 0 0 3px rgba(127, 174, 166, 0.12);
 }
 
-.searchIcon {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
+.clearBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 44px;
+    padding: 0 0.9rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
     color: var(--text-secondary);
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
-/* Filter Tabs */
+.clearBtn:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+}
+
 .filterTabs {
-    display: flex;
-    gap: var(--spacing-md);
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: var(--spacing-xs);
-    margin-bottom: var(--spacing-md);
+    display: inline-flex;
+    gap: 0.35rem;
+    padding: 0.25rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    width: fit-content;
 }
 
 .filterTab {
-    background: none;
-    border: none;
+    min-height: 36px;
+    padding: 0 0.9rem;
+    border-radius: 8px;
     color: var(--text-secondary);
-    font-size: 1rem;
-    font-weight: 500;
-    padding: 0.5rem 0.25rem;
-    cursor: pointer;
-    position: relative;
-    transition: color 0.2s;
+    font-size: 0.92rem;
+    font-weight: 600;
+    transition: background-color 140ms ease, color 140ms ease;
 }
 
 .filterTab:hover {
@@ -87,51 +120,42 @@
 }
 
 .activeTab {
-    color: var(--color-social);
-    font-weight: 600;
-}
-
-.activeTab::after {
-    content: '';
-    position: absolute;
-    bottom: -5px; /* 对齐 border-bottom */
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background-color: var(--color-social);
+    background: rgba(127, 174, 166, 0.14);
+    color: #d4ece6;
 }
 
 .feed {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md); /* 减小卡片间距 */
+    gap: 1rem;
 }
 
 .loading,
 .endMessage {
     display: flex;
     justify-content: center;
-    padding: var(--spacing-lg);
+    padding: 1.5rem 0;
     color: var(--text-secondary);
 }
 
 .loadMore {
     display: flex;
     justify-content: center;
-    margin-top: var(--spacing-xl);
+    margin-top: 1.25rem;
 }
 
-.titleContainer {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
+@media (max-width: 760px) {
+    .header {
+        padding: 1rem;
+    }
 
-.clearBtn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: #64748b;
-    display: flex;
-    align-items: center;
+    .titleRow,
+    .toolsRow {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .clearBtn {
+        justify-content: center;
+    }
 }

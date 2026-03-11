@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
 import { getUserTrips } from '../../api/travel';
 import { useAuth } from '../../context/useAuth';
 import TripCard from '../../components/TripCard';
 import Button from '../../components/Button';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import CreateTripModal from './CreateTripModal';
-import { Plus } from 'lucide-react';
 import styles from './TravelList.module.css';
 
 const MyTripsPage = () => {
@@ -18,9 +18,9 @@ const MyTripsPage = () => {
         if (!user?.id) return;
         try {
             const data = await getUserTrips(user.id);
-            setTrips(Array.isArray(data) ? data : (data.trips || []));
+            setTrips(Array.isArray(data) ? data : data.trips || []);
         } catch (error) {
-            console.error("Failed to load trips", error);
+            console.error('Failed to load trips', error);
         } finally {
             setLoading(false);
         }
@@ -32,10 +32,9 @@ const MyTripsPage = () => {
 
     return (
         <div>
-            <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
-                <Button variant="travel" onClick={() => setShowModal(true)}>
-                    <Plus size={20} style={{ marginRight: '0.5rem' }} />
-                    新建旅行
+            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+                <Button icon={<Plus size={16} />} variant="travel" onClick={() => setShowModal(true)}>
+                    新建行程
                 </Button>
             </div>
 
@@ -46,9 +45,9 @@ const MyTripsPage = () => {
             ) : (
                 <div className={styles.grid}>
                     {trips.length > 0 ? (
-                        trips.map(trip => <TripCard key={trip.id} trip={trip} />)
+                        trips.map((trip) => <TripCard key={trip.id} trip={trip} />)
                     ) : (
-                        <div className={styles.empty}>你还没有创建任何旅行计划。</div>
+                        <div className={styles.empty}>你还没有创建任何行程计划。</div>
                     )}
                 </div>
             )}
