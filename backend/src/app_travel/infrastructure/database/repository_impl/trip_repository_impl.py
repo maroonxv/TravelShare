@@ -141,7 +141,10 @@ class TripRepositoryImpl(ITripRepository):
         Returns:
             旅行列表
         """
-        trip_pos = self._trip_dao.find_public(limit, offset, search_query)
+        if search_query is None:
+            trip_pos = self._trip_dao.find_public(limit, offset)
+        else:
+            trip_pos = self._trip_dao.find_public(limit, offset, search_query)
         return [po.to_domain() for po in trip_pos]
     
     def delete(self, trip_id: TripId) -> None:

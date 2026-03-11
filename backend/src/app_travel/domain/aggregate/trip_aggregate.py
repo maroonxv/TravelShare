@@ -443,8 +443,8 @@ class Trip:
             TransitCalculationResult: 如果计算了交通则返回结果，否则返回 None
         """
         # 权限检查：只有管理员（包括创建者）可以添加活动
-        if not self.is_admin(operator_id):
-            raise ValueError("Only trip admins can add activities")
+        if not self.is_member(operator_id):
+            raise ValueError("Only trip members can add activities")
 
         if day_index < 0 or day_index >= len(self._days):
             raise ValueError(f"Invalid day index: {day_index}")
@@ -518,8 +518,8 @@ class Trip:
             TransitCalculationResult: 如果计算了交通则返回结果，否则返回 None
         """
         # 权限检查
-        if not self.is_admin(operator_id):
-            raise ValueError("Only trip admins can modify activities")
+        if not self.is_member(operator_id):
+            raise ValueError("Only trip members can modify activities")
 
         if day_index < 0 or day_index >= len(self._days):
             raise ValueError(f"Invalid day index: {day_index}")
@@ -618,8 +618,8 @@ class Trip:
             TransitCalculationResult: 如果计算了交通则返回结果，否则返回 None
         """
         # 权限检查
-        if not self.is_admin(operator_id):
-            raise ValueError("Only trip admins can remove activities")
+        if not self.is_member(operator_id):
+            raise ValueError("Only trip members can remove activities")
 
         if day_index < 0 or day_index >= len(self._days):
             raise ValueError(f"Invalid day index: {day_index}")
@@ -685,8 +685,8 @@ class Trip:
             TransitCalculationResult: 包含更新后的Transit
         """
         # 权限检查
-        if not self.is_admin(operator_id):
-            raise ValueError("Only trip admins can modify transit")
+        if not self.is_member(operator_id):
+            raise ValueError("Only trip members can modify transit")
 
         if day_index < 0 or day_index >= len(self._days):
             raise ValueError(f"Invalid day index: {day_index}")
@@ -714,7 +714,9 @@ class Trip:
             raise ValueError(f"Invalid transport mode: {transport_mode}")
 
         if target_transit.transport_mode == new_mode:
-            return None
+            result = TransitCalculationResult()
+            result.add_transit(target_transit)
+            return result
             
         # 查找相关联的 Activity
         from_activity = day.get_activity(target_transit.from_activity_id)
@@ -779,8 +781,8 @@ class Trip:
             TransitCalculationResult: 如果计算了交通则返回结果，否则返回 None
         """
         # 权限检查
-        if not self.is_admin(operator_id):
-            raise ValueError("Only trip admins can update itinerary")
+        if not self.is_member(operator_id):
+            raise ValueError("Only trip members can update itinerary")
 
         if day_index < 0 or day_index >= len(self._days):
             raise ValueError(f"Invalid day index: {day_index}")

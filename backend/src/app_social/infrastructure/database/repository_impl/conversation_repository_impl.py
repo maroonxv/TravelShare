@@ -146,7 +146,28 @@ class ConversationRepositoryImpl(IConversationRepository):
     
     def _load_participants(self, conversation_id: str) -> Dict[str, ConversationRole]:
         """加载会话参与者及角色"""
-        rows = self._conversation_dao.get_participants_with_roles(conversation_id)
+        rows = None
+        get_participants_with_roles = getattr(self._conversation_dao, "get_participants_with_roles", None)
+        if callable(get_participants_with_roles):
+            try:
+                rows = get_participants_with_roles(conversation_id)
+                if rows is not None and not isinstance(rows, list):
+                    rows = list(rows)
+            except TypeError:
+                rows = None
+
+        if rows is None:
+            get_participant_ids = getattr(self._conversation_dao, "get_participant_ids", None)
+            if callable(get_participant_ids):
+                participant_ids = get_participant_ids(conversation_id) or []
+                if not isinstance(participant_ids, list):
+                    try:
+                        participant_ids = list(participant_ids)
+                    except TypeError:
+                        return {}
+                return {participant_id: ConversationRole.MEMBER for participant_id in participant_ids}
+            return {}
+
         result = {}
         for row in rows:
             try:

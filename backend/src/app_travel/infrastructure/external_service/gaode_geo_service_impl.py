@@ -6,8 +6,9 @@ from app_travel.domain.value_objects.travel_value_objects import Location
 class GaodeGeoServiceImpl(IGeoService):
     """基于高德地图 Web 服务 API 的地理服务实现"""
 
-    def __init__(self, api_key: str = "615fc65de7dcae0a3b68b67ca8746591"):
+    def __init__(self, api_key: str = "615fc65de7dcae0a3b68b67ca8746591", timeout: int = 10):
         self.api_key = api_key
+        self.timeout = timeout
         self.base_url = "https://restapi.amap.com/v3"
 
     def geocode(self, address: str) -> Optional[Location]:
@@ -22,7 +23,7 @@ class GaodeGeoServiceImpl(IGeoService):
             "output": "json"
         }
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=self.timeout)
             data = response.json()
             
             if data.get("status") == "1" and data.get("geocodes"):
@@ -50,7 +51,7 @@ class GaodeGeoServiceImpl(IGeoService):
             "output": "json"
         }
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=self.timeout)
             data = response.json()
             
             if data.get("status") == "1" and data.get("regeocode"):
@@ -82,7 +83,7 @@ class GaodeGeoServiceImpl(IGeoService):
             "output": "json"
         }
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=self.timeout)
             data = response.json()
             
             if data.get("status") == "1" and data.get("results"):
@@ -103,7 +104,7 @@ class GaodeGeoServiceImpl(IGeoService):
             "output": "json"
         }
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=self.timeout)
             data = response.json()
             
             if data.get("status") == "1" and data.get("regeocode"):
@@ -188,7 +189,7 @@ class GaodeGeoServiceImpl(IGeoService):
             params["strategy"] = "0" 
             
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=self.timeout)
             data = response.json()
             
             # 检查 API 状态
@@ -304,7 +305,7 @@ class GaodeGeoServiceImpl(IGeoService):
             params["keywords"] = keyword # 其实周边搜索也需要关键词
 
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=self.timeout)
             data = response.json()
             
             results = []

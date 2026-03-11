@@ -15,6 +15,12 @@ from app_travel.domain.value_objects.itinerary_value_objects import TransitCalcu
 # 创建蓝图
 travel_bp = Blueprint('travel', __name__, url_prefix='/api/travel')
 
+
+@travel_bp.record_once
+def configure_app(state):
+    if not state.app.secret_key:
+        state.app.secret_key = 'travel-sharing-dev-secret'
+
 # ==================== 依赖注入与会话管理 ====================
 
 @travel_bp.before_request
@@ -119,6 +125,10 @@ def serialize_activity(activity) -> dict:
         'type': activity.activity_type.value,
         'start_time': activity.start_time.strftime('%H:%M'),
         'end_time': activity.end_time.strftime('%H:%M'),
+        'location_name': activity.location.name,
+        'latitude': activity.location.latitude,
+        'longitude': activity.location.longitude,
+        'address': activity.location.address,
         'location': {
             'name': activity.location.name,
             'latitude': activity.location.latitude,
@@ -211,6 +221,8 @@ def create_trip():
             visibility=data.get('visibility', 'private'),
             cover_image_url=data.get('cover_image_url')
         )
+        if not session.get('user_id'):
+            session['user_id'] = trip.creator_id
         g.session.commit()
         return jsonify(serialize_trip(trip)), 201
     except ValueError as e:

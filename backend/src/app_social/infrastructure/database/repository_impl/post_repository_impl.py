@@ -129,12 +129,15 @@ class PostRepositoryImpl(IPostRepository):
         search_query: Optional[str] = None
     ) -> List[Post]:
         """获取公开帖子流"""
-        post_pos = self._post_dao.find_public_feed(
-            limit=limit,
-            offset=offset,
-            tags=tags,
-            search_query=search_query
-        )
+        query_kwargs = {
+            "limit": limit,
+            "offset": offset,
+            "tags": tags,
+        }
+        if search_query is not None:
+            query_kwargs["search_query"] = search_query
+
+        post_pos = self._post_dao.find_public_feed(**query_kwargs)
         return [po.to_domain() for po in post_pos]
     
     def find_by_visibility(
