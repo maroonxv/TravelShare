@@ -1,5 +1,4 @@
-# 场景视图 (Scenario View)
-
+# 3.3 场景视图
 ## 1. 简介
 
 场景视图 (Scenario View) 用于描述系统的参与者 (Actors) 与系统功能组件之间的交互过程。它通过具体的用例场景（Use Cases），将架构设计中的各个逻辑组件串联起来，验证系统架构是否能够满足业务需求。
@@ -8,22 +7,20 @@
 
 ---
 
-## 2. 参与者 (Actors)
-
+## 2. 参与者
 在描述具体场景之前，首先定义与系统交互的主要参与者：
 
-*   **普通用户 (User)**: 系统的主要使用者。可以创建行程、发布动态、发送消息、使用 AI 助手。
-*   **行程创建者 (Trip Creator)**: 拥有特定行程管理权限（如邀请成员、修改预算、更改状态）的用户。
-*   **系统管理员 (Admin)**: 负责后台数据管理、用户封禁、内容审核等运维操作。
-*   **AI 引擎 (AI Engine)**: 外部系统参与者（集成 DeepSeek 大模型），负责生成自然语言回复。
-*   **第三方地图服务 (Map Service)**: 外部系统参与者（高德地图），提供地理编码和路径规划能力。
+*   **普通用户**: 系统的主要使用者。可以创建行程、发布动态、发送消息、使用 AI 助手。
+*   **行程创建者**: 拥有特定行程管理权限（如邀请成员、修改预算、更改状态）的用户。
+*   **系统管理员**: 负责后台数据管理、用户封禁、内容审核等运维操作。
+*   **AI 引擎**: 外部系统参与者（集成 DeepSeek 大模型），负责生成自然语言回复。
+*   **第三方地图服务**: 外部系统参与者（高德地图），提供地理编码和路径规划能力。
 
 ---
 
 ## 3. 核心业务场景详解
 
-### 3.1 场景一：多人协同行程规划 (Collaborative Trip Planning)
-
+### 3.1 场景一：多人协同行程规划
 #### 3.1.1 场景描述
 这是系统的核心业务价值所在。用户创建一个“大理三日游”的行程，并邀请好友加入。所有成员都可以向行程中添加具体的活动（如“游览崇圣寺三塔”），系统需要自动计算活动之间的交通路线，并实时更新给所有成员。此场景考验系统的事务一致性和领域逻辑的封装能力。
 
@@ -40,18 +37,17 @@
     *   *后端处理*: `TravelService`（或独立的 Event Handler）捕获事件，调用 `ItineraryService.calculate_routes()`。该服务对比相邻活动的位置，调用高德地图 API 获取交通方式（驾车/公交）及耗时，生成或更新 `Transit` 实体。
 5.  **查看详情**: 用户 A 刷新页面，看到包含最新活动和交通路线的完整行程。
 
-#### 3.1.3 交互时序图 (UML Sequence Diagram)
-
+#### 3.1.3 交互时序图
 ```plantuml
 @startuml
 autonumber
-actor "User (Creator)" as User
-participant "TravelView" as API
-participant "TravelService" as Service
-participant "TripRepository" as Repo
-participant "Trip (Aggregate)" as Domain
-participant "ItineraryService" as RouteService
-participant "EventBus" as Bus
+actor "用户 (创建者)" as User
+participant "TravelView (视图)" as API
+participant "TravelService (服务)" as Service
+participant "TripRepository (仓储)" as Repo
+participant "Trip (聚合根)" as Domain
+participant "ItineraryService (行程服务)" as RouteService
+participant "EventBus (事件总线)" as Bus
 
 User -> API: POST /trips/{id}/activities
 note right: 用户添加新活动
@@ -95,10 +91,9 @@ API --> User: 201 Created (Updated Itinerary)
 
 ---
 
-### 3.2 场景二：社交动态发布 (Social Feed Posting)
-
+### 3.2 场景二：社交动态发布
 #### 3.2.1 场景描述
-用户在旅行结束后，希望将行程中的照片和经历整理成一篇游记发布到社区广场。该场景涉及多媒体资源的处理、数据的关联（关联特定行程）以及读写分离的考量（发布是写，Feed 流是高频读）。
+用户在旅行结束后，希望将行程中的照片和经历整理成一篇游记发布到社区广场。该场景涉及多媒体资源的处理、数据的关联（关联特定行程）以及读写分离的考量（发布是写，信息流是高频读）。
 
 #### 3.2.2 详细流程步骤
 
@@ -110,18 +105,17 @@ API --> User: 201 Created (Updated Itinerary)
 4.  **持久化**: `PostRepository` 将 Post 及其关联的 Images, Tags 保存至数据库。
 5.  **分发**: 发布成功后，系统可能会将该帖子 ID 推送给关注者的 Timeline（本项目简化为拉模式，即查询时动态构建 Feed）。
 
-#### 3.2.3 交互时序图 (UML Sequence Diagram)
-
+#### 3.2.3 交互时序图
 ```plantuml
 @startuml
 autonumber
-actor "User" as User
-participant "SocialView" as View
-participant "SocialService" as Service
-participant "PostRepository" as PostRepo
-participant "TripRepository" as TripRepo
-participant "Post (Aggregate)" as Post
-database "MySQL" as DB
+actor "用户" as User
+participant "SocialView (视图)" as View
+participant "SocialService (服务)" as Service
+participant "PostRepository (仓储)" as PostRepo
+participant "TripRepository (仓储)" as TripRepo
+participant "Post (聚合根)" as Post
+database "MySQL 数据库" as DB
 
 User -> View: POST /posts (title, content, images, trip_id)
 activate View
@@ -159,8 +153,7 @@ deactivate View
 
 ---
 
-### 3.3 场景三：基于 WebSocket 的实时聊天 (Real-time Chat)
-
+### 3.3 场景三：基于 WebSocket 的实时聊天
 #### 3.3.1 场景描述
 用户在浏览其他人的主页时，发起私聊询问旅行建议。或者在行程群组中与同伴实时沟通。此场景展示了 HTTP 请求与 WebSocket 事件通知如何协同工作，即“REST for Action, WebSocket for Notification”模式。
 
@@ -178,20 +171,19 @@ deactivate View
     *   *推送*: Handler 提取事件中的 `conversation_id` 和消息内容，调用 `socketio.emit('new_message', data, room=conversation_id)`。
 5.  **接收消息**: 房间内的所有在线用户的 Socket 收到 `new_message` 事件，前端更新 UI。
 
-#### 3.3.3 交互时序图 (UML Sequence Diagram)
-
+#### 3.3.3 交互时序图
 ```plantuml
 @startuml
 autonumber
-actor "User A (Sender)" as Sender
-actor "User B (Receiver)" as Receiver
-participant "SocketClient A" as ClientA
-participant "SocketClient B" as ClientB
+actor "用户 A (发送者)" as Sender
+actor "用户 B (接收者)" as Receiver
+participant "Socket 客户端 A" as ClientA
+participant "Socket 客户端 B" as ClientB
 participant "SocialView (HTTP)" as API
-participant "SocialService" as Service
-participant "ConversationRepo" as Repo
-participant "EventBus" as Bus
-participant "SocketHandler" as SocketServer
+participant "SocialService (服务)" as Service
+participant "ConversationRepo (仓储)" as Repo
+participant "EventBus (事件总线)" as Bus
+participant "SocketHandler (处理器)" as SocketServer
 
 note over ClientA, ClientB: 双方已建立 Socket 连接并 Join Room
 
@@ -223,8 +215,7 @@ deactivate SocketServer
 
 ---
 
-### 3.4 场景四：AI 智能助手问答 (AI Travel Assistant with RAG)
-
+### 3.4 场景四：AI 智能助手问答
 #### 3.4.1 场景描述
 用户向 AI 提问：“我带孩子去西安玩，有什么推荐的行程？”系统不能只依靠大模型的通用知识，还需要检索站内已有的优质亲子游记和热门景点数据，生成更具参考价值的回答（RAG - 检索增强生成）。
 
@@ -242,17 +233,16 @@ deactivate SocketServer
 5.  **流式生成**: 调用 DeepSeek API，开启 `stream=True` 模式。
 6.  **响应流**: 后端使用 Server-Sent Events (SSE) 将 AI 的生成的字符片段逐个推送给前端，实现打字机效果。同时将检索到的来源作为“推荐卡片”数据附带在响应流的末尾。
 
-#### 3.4.3 交互时序图 (UML Sequence Diagram)
-
+#### 3.4.3 交互时序图
 ```plantuml
 @startuml
 autonumber
-actor "User" as User
-participant "AiView" as View
-participant "AiService" as Service
-participant "Retriever" as RAG
-database "MySQL (Travel/Social)" as DB
-participant "DeepSeekAdapter" as LLM
+actor "用户" as User
+participant "AiView (视图)" as View
+participant "AiService (服务)" as Service
+participant "Retriever (检索器)" as RAG
+database "MySQL (旅行/社交)" as DB
+participant "DeepSeekAdapter (大模型适配器)" as LLM
 
 User -> View: POST /ai/chat (question)
 activate View

@@ -1,5 +1,4 @@
-# 详细类设计说明书 (Detailed Class Design Specification)
-
+# 详细类设计说明书
 ## 1. 引言
 
 ### 1.1 文档目的
@@ -21,8 +20,7 @@
 
 ---
 
-## 2. 共享内核设计 (Shared Kernel)
-
+## 2. 共享内核设计
 共享内核位于 `src/shared/` 目录下，定义了整个系统通用的基类、接口和工具，是维持架构一致性的基石。
 
 ### 2.1 领域基础类
@@ -97,12 +95,10 @@ Entity <|-- AggregateRoot
 
 ---
 
-## 3. 旅行上下文类设计 (App Travel)
-
+## 3. 旅行上下文类设计
 这是系统的核心复杂域，物理路径 `src/app_travel`。
 
-### 3.1 领域层 (Domain Layer)
-
+### 3.1 领域层
 #### 3.1.1 `Trip` (聚合根)
 代表一次旅行计划，是整个上下文的核心控制点。
 *   **属性**：
@@ -216,8 +212,7 @@ Activity --> Money
 @enduml
 ```
 
-### 3.2 应用层 (Application Layer)
-
+### 3.2 应用层
 #### 3.2.1 `TravelService`
 编排旅行相关的用户用例。
 *   **依赖**：`ITripRepository`, `IUserRepository`, `EventBus`, `IGeoService`。
@@ -236,8 +231,7 @@ Activity --> Money
         *   4. *可选*：调用 `itinerary_service.calculate_transits(trip.days[cmd.day_index])` 自动补充交通信息。
         *   5. `trip_repo.save(trip)`。
 
-### 3.3 基础设施层 (Infrastructure Layer)
-
+### 3.3 基础设施层
 #### 3.3.1 `TripRepositoryImpl`
 实现 `ITripRepository` 接口。
 *   **职责**：负责 Domain Object (DO) 与 Persistent Object (PO) 之间的转换与持久化。
@@ -256,10 +250,8 @@ Activity --> Money
 
 ---
 
-## 4. 社交上下文类设计 (App Social)
-
-### 4.1 领域层 (Domain Layer)
-
+## 4. 社交上下文类设计
+### 4.1 领域层
 #### 4.1.1 `Post` (聚合根)
 代表用户发布的游记或动态。
 *   **属性**：
@@ -346,8 +338,7 @@ Conversation "1" *-- "n" Message
 
 ---
 
-## 5. 认证上下文类设计 (App Auth)
-
+## 5. 认证上下文类设计
 ### 5.1 `User` (聚合根)
 *   **属性**：
     *   `username`: `str`
@@ -369,8 +360,7 @@ Conversation "1" *-- "n" Message
 
 ---
 
-## 6. AI 助手上下文类设计 (App AI)
-
+## 6. AI 助手上下文类设计
 ### 6.1 `AiConversation` (聚合根)
 维护用户与 AI 的上下文历史。
 *   **属性**：
@@ -405,18 +395,17 @@ Conversation "1" *-- "n" Message
 
 ---
 
-## 7. 数据库映射策略 (ORM Strategy)
-
+## 7. 数据库映射策略
 本项目使用 SQLAlchemy 作为 ORM 框架，但严格遵循“存储与领域分离”的原则。
 
-### 7.1 持久化对象 (PO)
+### 7.1 持久化对象
 位于 `infrastructure/models.py`。这些类继承自 `db.Model`，直接映射数据库表。
 *   **特点**：
     *   只有数据字段，没有业务方法。
     *   使用 `Column`, `ForeignKey`, `relationship` 定义表结构。
     *   例如：`TripPO` 包含 `id`, `creator_id` 等列，以及 `days = relationship('TripDayPO')`。
 
-### 7.2 映射器 (Mapper)
+### 7.2 映射器
 每个模块都有 `Mapper` 类，负责 PO 和 DO 的互转。
 *   **`to_domain(po) -> entity`**:
     *   从 PO 读取数据。

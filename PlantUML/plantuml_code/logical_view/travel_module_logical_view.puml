@@ -1,0 +1,110 @@
+@startuml
+title Logical View - Travel Core Subsystem
+
+skinparam componentStyle uml2
+skinparam packageStyle rectangle
+skinparam linetype ortho
+
+' Definitions
+package "Interface Layer" {
+    class "travel_view" as View <<Blueprint>> {
+        + handle_travel_request()
+        + manage_db_session()
+    }
+}
+
+package "Application Layer" {
+    class "TravelService" as AppService {
+        + create_trip()
+        + orchestrate_use_cases()
+        + call_factories()
+        + publish_domain_events()
+    }
+}
+
+package "Domain Layer" {
+    package "Trip Aggregate" {
+        class "Trip" as Trip <<Aggregate Root>> {
+            - creator
+            - date_range
+            - budget
+            - visibility
+            - status
+            - members: List
+            + create()
+            + add_day()
+        }
+
+        class "TripDay" as TripDay <<Entity>> {
+            - date
+            - activities: List
+            - transits: List
+            + organize_activities()
+        }
+
+        class "Activity" as Activity <<Entity>> {
+            - time
+            - location
+        }
+
+        class "Transit" as Transit <<Entity>> {
+            - from_activity
+            - to_activity
+            - travel_mode
+        }
+    }
+
+    interface "ITripRepository" as ITripRepo {
+        + save(trip)
+        + find_by_id(id)
+    }
+
+    interface "IGeoService" as IGeoService {
+        + resolve_location()
+        + calculate_path()
+    }
+
+    class "ItineraryService" as DomainService <<Domain Service>> {
+        + calculate_routes()
+        + check_feasibility()
+    }
+}
+
+package "Infrastructure Layer" {
+    class "TripRepositoryImpl" as RepoImpl {
+    }
+
+    class "TripDAO" as DAO <<SQLAlchemy>> {
+        + map_to_database()
+    }
+
+    class "GaodeGeoServiceImpl" as GeoImpl {
+    }
+}
+
+database "SQLite (Default)" as DB
+cloud "Amap (Gaode) API" as AmapAPI
+
+' Relationships - Interface to App
+View ..> AppService : uses
+
+' Relationships - App to Domain
+AppService ..> Trip : factory/method calls
+AppService ..> ITripRepo : persists
+AppService ..> DomainService : uses
+
+' Relationships - Domain Internal
+Trip "1" *-- "many" TripDay : contains
+TripDay "1" *-- "many" Activity : organizes
+TripDay "1" *-- "many" Transit : organizes
+DomainService ..> IGeoService : uses
+DomainService ..> Trip : calculates for
+
+' Relationships - Infra Implementation
+RepoImpl ..|> ITripRepo : implements
+RepoImpl ..> DAO : uses
+DAO ..> DB : reads/writes (via ORM)
+GeoImpl ..|> IGeoService : implements
+GeoImpl ..> AmapAPI : requests
+
+@enduml

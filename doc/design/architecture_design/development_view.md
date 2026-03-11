@@ -1,5 +1,4 @@
-# 开发视图 (Development View)
-
+# 3.5 开发视图
 ## 1. 简介
 
 开发视图 (Development View) 关注软件开发环境中的实际组织结构。它描述了软件模块的组织方式、包结构、分层依赖关系以及构建和配置管理策略。本视图的主要受众是开发人员和测试人员，旨在规范代码结构，确保团队协作的一致性。
@@ -29,9 +28,8 @@ travel_sharing_app_v0/
 
 ---
 
-## 3. 后端开发架构 (Backend)
-
-后端采用 **模块化单体 (Modular Monolith)** 架构，严格遵循领域驱动设计 (DDD) 的分层原则。
+## 3. 后端开发架构
+后端采用 **模块化单体** 架构，严格遵循领域驱动设计（DDD） 的分层原则。
 
 ### 3.1 源码目录结构 (`backend/src/`)
 
@@ -82,24 +80,23 @@ app_travel/
     *   `app_social` **可以依赖** `app_auth` (获取用户信息) 和 `app_travel` (关联行程)。
     *   **禁止循环依赖**：例如 `app_travel` 不应依赖 `app_social`。如果 Trip 完成时需要发 Feed，应通过**发布领域事件**解耦，而不是直接调用 `SocialService`。
 
-### 3.4 后端组件依赖图 (UML Component Diagram)
-
+### 3.4 后端组件依赖图
 ```plantuml
 @startuml
-component "Frontend (React)" as FE
+component "前端 (React)" as FE
 
-package "Backend (Flask)" {
-    component "Interface Layer\n(Blueprints)" as View
-    component "Application Layer\n(Services)" as AppService
-    component "Domain Layer\n(Aggregates/Entities)" as Domain
-    component "Infrastructure Layer\n(Repositories/Adapters)" as Infra
+package "后端 (Flask)" {
+    component "接口层\n(Blueprints)" as View
+    component "应用层\n(Services)" as AppService
+    component "领域层\n(Aggregates/Entities)" as Domain
+    component "基础设施层\n(Repositories/Adapters)" as Infra
     
-    component "Shared Kernel\n(EventBus, Utils)" as Shared
+    component "共享内核\n(EventBus, Utils)" as Shared
 }
 
-database "MySQL" as DB
+database "MySQL 数据库" as DB
 cloud "DeepSeek API" as LLM
-cloud "Gaode Map API" as Map
+cloud "高德地图 API" as Map
 
 FE --> View : HTTP/WebSocket
 View --> AppService : DTOs
@@ -119,8 +116,7 @@ Infra ..> Shared : Use
 
 ---
 
-## 4. 前端开发架构 (Frontend)
-
+## 4. 前端开发架构
 前端应用基于 `React 18` + `Vite` 构建，采用组件化和 Hooks 模式。
 
 ### 4.1 源码目录结构 (`frontend/src/`)

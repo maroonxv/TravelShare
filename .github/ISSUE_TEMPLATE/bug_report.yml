@@ -1,0 +1,62 @@
+name: Bug Report
+description: 报告一个可复现的问题
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈问题。请尽量提供可复现的信息，方便我们快速定位。
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题描述
+      description: 简要说明发生了什么问题。
+      placeholder: 例如：登录成功后跳转到个人主页时页面白屏。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 按顺序描述如何复现该问题。
+      placeholder: |
+        1. 打开首页
+        2. 点击登录
+        3. 输入测试账号
+        4. 点击提交
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+      description: 你原本预期会发生什么？
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+      description: 实际发生了什么？如果有报错信息请贴出来。
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 影响范围
+      options:
+        - frontend
+        - backend
+        - docs
+        - ci
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息
+      description: 例如系统、Node/Python 版本、浏览器版本等。
+      placeholder: Windows 11 / Node 20 / Python 3.11 / Chrome 134

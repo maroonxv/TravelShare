@@ -1,10 +1,9 @@
-# 逻辑视图 (Logical View)
-
+# 3.4 逻辑视图
 ## 1. 简介
 
 逻辑视图 (Logical View) 关注系统如何满足功能需求。它通过抽象和分解，将复杂的系统划分为一系列相互协作的逻辑单元（包、子系统、类），并描述它们之间的静态结构和动态行为。
 
-本项目采用**领域驱动设计 (DDD)** 方法论，逻辑架构主要由**限界上下文 (Bounded Contexts)** 和**分层架构 (Layered Architecture)** 共同定义。本视图将详细展示系统的逻辑组件、职责分配以及它们如何协作完成核心业务流程。
+本项目采用**领域驱动设计（DDD）** 方法论，逻辑架构主要由**限界上下文 (Bounded Contexts)** 和**分层架构 (Layered Architecture)** 共同定义。本视图将详细展示系统的逻辑组件、职责分配以及它们如何协作完成核心业务流程。
 
 ---
 
@@ -22,8 +21,7 @@
 | **AI 助手子系统** | `app_ai` | 提供基于 RAG 的智能问答、行程建议生成。 |
 | **后台管理子系统** | `app_admin` | 提供系统级的数据监控与资源管理界面。 |
 
-### 2.2 共享内核 (Shared Kernel)
-
+### 2.2 共享内核
 除了上述业务子系统外，存在一个 `shared` 包，作为共享内核。
 *   **职责**：存放通用的基础设施代码、工具类和跨上下文的协议定义。
 *   **包含组件**：
@@ -36,8 +34,7 @@
 
 ## 3. 详细子系统设计
 
-### 3.1 旅行核心子系统 (Travel Context)
-
+### 3.1 旅行核心子系统
 这是整个应用最复杂的业务核心，采用了严格的充血模型。
 
 #### 3.1.1 类与对象模型
@@ -48,7 +45,7 @@
         *   `start_trip()`: 校验当前状态，更新状态为 Ongoing，记录开始时间，触发 `TripStartedEvent`。
         *   `add_member(user_id, role)`: 校验操作权限及用户是否已存在。
         *   `update_budget(amount)`: 变更预算。
-*   **实体 (Entities)**:
+*   **实体**：
     *   **`TripDay`**: 代表行程中的某一天。负责管理当天的活动序列 (`activities` list)。
         *   逻辑: `reorder_activities()` 保证活动按时间或顺序排列。
     *   **`Activity`**: 具体的游玩项目。包含 `location` (经纬度), `start_time`, `end_time`。
@@ -57,17 +54,16 @@
     *   处理跨实体的复杂计算。例如，当用户在某一天添加了 5 个活动，该服务负责调用地图 API 计算最佳路径，或者重新计算所有活动的总时长和预估交通费用。
 
 #### 3.1.2 逻辑分层实现
-*   **Interface (View)**: `travel_view.py` 接收 `POST /trips` 请求，解析 JSON。
-*   **Application (Service)**: `TravelService` 开启事务，调用 `Trip` 构造函数创建对象，调用 `ITripRepository.save()`，最后提交事务。
+*   **接口层**： `travel_view.py` 接收 `POST /trips` 请求，解析 JSON。
+*   **应用层**： `TravelService` 开启事务，调用 `Trip` 构造函数创建对象，调用 `ITripRepository.save()`，最后提交事务。
 *   **Infrastructure**: `TripRepositoryImpl` 将 `Trip` 对象拆解为 `TripPO`, `TripDayPO`, `ActivityPO` 等多张表的记录存入 MySQL。
 
 ---
 
-### 3.2 社交互动子系统 (Social Context)
-
+### 3.2 社交互动子系统
 社交子系统包含“社区广场”和“即时通讯”两个主要逻辑分支。
 
-#### 3.2.1 社区动态 (Feed)
+#### 3.2.1 社区动态
 *   **聚合根 - `Post`**:
     *   代表一篇游记或动态。
     *   **关系**: 包含多个 `PostImage`，拥有多个 `Comment` 和 `Like`。
@@ -75,7 +71,7 @@
 *   **应用逻辑**:
     *   `SocialService.get_feed(tags)`: 复杂的查询逻辑。根据标签筛选，按时间倒序，并可能涉及“好友可见”等权限过滤。
 
-#### 3.2.2 即时通讯 (Chat)
+#### 3.2.2 即时通讯
 *   **聚合根 - `Conversation`**:
     *   代表一个聊天会话（私聊或群聊）。
     *   管理 `participants` (参与者列表)。
@@ -90,11 +86,10 @@
 
 ---
 
-### 3.3 AI 助手子系统 (AI Context)
-
+### 3.3 AI 助手子系统
 该子系统逻辑上是一个管道 (Pipeline) 结构，处理数据流。
 
-#### 3.3.1 RAG (检索增强生成) 逻辑流
+#### 3.3.1 RAG（检索增强生成） 逻辑流
 1.  **Query Pre-processing**: `AiService` 接收用户提问，提取关键词。
 2.  **Retrieval (检索器)**: `Retriever` 组件查询 `Travel` 和 `Social` 数据库。
     *   *逻辑*: 搜索用户的历史行程、公开的高赞游记、相关的地点信息。
@@ -104,8 +99,7 @@
 
 ---
 
-### 3.4 认证子系统 (Auth Context)
-
+### 3.4 认证子系统
 *   **核心类 - `User`**:
     *   虽然在数据库中是核心表，但在 DDD 逻辑视图中，其他子系统通常只引用 `user_id`，而不直接持有 `User` 对象，以降低耦合。
 *   **安全逻辑**:
@@ -118,21 +112,20 @@
 
 为了解决特定的逻辑问题，系统中广泛应用了标准设计模式。
 
-### 4.1 领域驱动设计 (DDD) 模式
-*   **充血模型 (Rich Domain Model)**: 业务逻辑（如校验、状态流转、计算）封装在实体类中，而非 Service 类中。Service 类主要负责协调。
-*   **仓储模式 (Repository)**: 屏蔽底层数据访问细节。逻辑层只依赖 `ITripRepository` 接口，不知道底层是 MySQL 还是 MongoDB。
-*   **值对象 (Value Object)**: 如 `Money` (金额+币种), `GeoLocation` (经度+纬度)。它们是不可变的，逻辑上通过替换整个对象来修改值。
+### 4.1 领域驱动设计（DDD） 模式
+*   **充血模型**： 业务逻辑（如校验、状态流转、计算）封装在实体类中，而非 Service 类中。Service 类主要负责协调。
+*   **仓储模式**： 屏蔽底层数据访问细节。逻辑层只依赖 `ITripRepository` 接口，不知道底层是 MySQL 还是 MongoDB。
+*   **值对象**： 如 `Money` (金额+币种), `GeoLocation` (经度+纬度)。它们是不可变的，逻辑上通过替换整个对象来修改值。
 
 ### 4.2 GoF 设计模式
-*   **工厂模式 (Factory)**: 用于创建复杂的聚合根。例如，创建 `Trip` 时需要同时初始化默认的 `TripDay` 和创建者 Member 记录，这些逻辑封装在 `TripFactory` 或构造函数中。
-*   **观察者模式 (Observer/Pub-Sub)**: 实现领域事件机制。`EventBus` 是 Subject，各 `Handler` 是 Observer。例如，`TripNotificationHandler` 观察 `TripInviteEvent`。
-*   **策略模式 (Strategy)**: 在 RAG 模块中，检索策略可以是 `KeywordSearchStrategy` 或 `VectorSearchStrategy` (预留扩展)，根据配置动态切换。
-*   **适配器模式 (Adapter)**: `Infrastructure` 层中的 `DeepSeekAdapter` 封装了具体的 HTTP API 调用，向领域层暴露统一的 `ILlmClient` 接口。
+*   **工厂模式**： 用于创建复杂的聚合根。例如，创建 `Trip` 时需要同时初始化默认的 `TripDay` 和创建者 Member 记录，这些逻辑封装在 `TripFactory` 或构造函数中。
+*   **观察者模式**： 实现领域事件机制。`EventBus` 是 Subject，各 `Handler` 是 Observer。例如，`TripNotificationHandler` 观察 `TripInviteEvent`。
+*   **策略模式**： 在 RAG 模块中，检索策略可以是 `KeywordSearchStrategy` 或 `VectorSearchStrategy` (预留扩展)，根据配置动态切换。
+*   **适配器模式**： `Infrastructure` 层中的 `DeepSeekAdapter` 封装了具体的 HTTP API 调用，向领域层暴露统一的 `ILlmClient` 接口。
 
 ---
 
-## 5. 组件交互逻辑 (Component Interaction)
-
+## 5. 组件交互逻辑
 ### 5.1 场景一：创建行程并邀请好友
 1.  **用户请求**: 前端发送 POST 请求到 `travel_view`。
 2.  **服务编排**: `TravelService` 接收 DTO。
@@ -159,11 +152,11 @@
 
 `Client (Browser)` -> `View (Controller)` -> `Application Service` -> `Domain Model` -> `Infrastructure (Repository)` -> `Database`
 
-*   **入站 (Inbound)**: JSON 数据在 View 层被校验，转化为 DTO 或直接参数传给 Service。Service 可能会从 Repository 加载 Domain Object。
-*   **处理 (Processing)**: 业务逻辑在 Domain Object 内部执行，修改对象状态。
-*   **出站 (Outbound)**: 只有 Domain Object 的“快照”或 DTO 会被返回给 View 层序列化为 JSON。Repository 负责将变更写回数据库。
+*   **入站**： JSON 数据在 View 层被校验，转化为 DTO 或直接参数传给 Service。Service 可能会从 Repository 加载 Domain Object。
+*   **处理**： 业务逻辑在 Domain Object 内部执行，修改对象状态。
+*   **出站**： 只有 Domain Object 的“快照”或 DTO 会被返回给 View 层序列化为 JSON。Repository 负责将变更写回数据库。
 
-### 6.2 实时消息流 (WebSocket)
+### 6.2 实时消息流
 `Client A` -> `Socket Event Handler` -> `SocialService` -> `Database`
                                              |
                                              v

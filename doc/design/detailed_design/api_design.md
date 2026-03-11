@@ -1,4 +1,4 @@
-# API 接口详细设计说明书 (API Design Specification)
+# API 接口详细设计说明书
 
 ## 1. 引言
 
@@ -23,7 +23,7 @@
     *   社交模块：`/api/social`
     *   AI 模块：`/api/ai`
 
-### 2.2 请求头 (Headers)
+### 2.2 请求头
 *   `Content-Type`: `application/json` (普通请求) 或 `multipart/form-data` (文件上传)
 *   `Accept`: `application/json`
 *   `Cookie`: `session=<token>` (用于身份认证)
@@ -64,8 +64,7 @@
 
 ---
 
-## 3. 认证模块 (Auth Module)
-
+## 3. 认证模块
 ### 3.1 注册
 *   **URL**: `POST /api/auth/register`
 *   **描述**: 创建新用户账号。
@@ -107,8 +106,7 @@
 
 ---
 
-## 4. 旅行模块 (Travel Module)
-
+## 4. 旅行模块
 ### 4.1 创建行程
 *   **URL**: `POST /api/travel/trips`
 *   **描述**: 初始化一个新的旅行计划。
@@ -230,8 +228,7 @@ Frontend -> Frontend: 更新 UI 地图与时间轴
 
 ---
 
-## 5. 社交模块 (Social Module)
-
+## 5. 社交模块
 ### 5.1 发布帖子
 *   **URL**: `POST /api/social/posts`
 *   **Content-Type**: `multipart/form-data`
@@ -242,7 +239,7 @@ Frontend -> Frontend: 更新 UI 地图与时间轴
     *   `trip_id`: (Optional) 关联的行程ID
 *   **响应 (201)**: 创建的帖子对象。
 
-### 5.2 获取 Feed 流
+### 5.2 获取 信息流
 *   **URL**: `GET /api/social/feed`
 *   **参数**:
     *   `limit`: 数量 (默认 20)
@@ -304,8 +301,7 @@ ChatUI -> TravelAPI: GET /trips/trip_123 (点击卡片时)
 
 ---
 
-## 6. AI 助手模块 (AI Module)
-
+## 6. AI 助手模块
 ### 6.1 AI 对话 (流式)
 *   **URL**: `POST /api/ai/chat`
 *   **描述**: 基于 RAG 技术与 AI 对话，返回流式响应 (SSE)。

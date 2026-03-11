@@ -1,120 +1,150 @@
 # TravelShare
 
-本项目是一个基于前后端分离架构的旅行信息分享平台，旨在为用户提供旅行前的攻略制定、旅行中的路线管理以及旅行后的资源分享与社交互动功能。
+![Frontend](https://img.shields.io/badge/Frontend-React%2019-61DAFB?logo=react&logoColor=white)
+![Backend](https://img.shields.io/badge/Backend-Flask%203-000000?logo=flask&logoColor=white)
+![Database](https://img.shields.io/badge/Database-MySQL%20%7C%20SQLite-4479A1?logo=mysql&logoColor=white)
+![Project](https://img.shields.io/badge/Type-Course%20Project-1F6FEB)
 
-## 📋 功能列表与要求
+TravelShare 是一个面向“行前规划、行中协作、行后分享”的旅行共享平台。项目采用前后端分离架构，前端基于 React + Vite，后端基于 Flask + SQLAlchemy，覆盖用户认证、社交广场、行程管理、即时聊天、AI 旅行助手和后台管理等能力。
 
-本项目实现了以下核心需求：
+## 项目亮点
 
-1.  **旅行前**：攻略收集、筛选、队伍组建（添加成员）。
-2.  **旅行中**：路线云备份、队伍管理。
-3.  **旅行后**：资源分享、浏览动态、好友互动。
+- 旅行全周期闭环：从攻略准备、组队出行，到动态分享和互动社交。
+- 领域拆分清晰：后端围绕 `auth`、`social`、`travel`、`ai`、`admin` 五个模块组织。
+- 可演示可扩展：既适合课程答辩展示，也保留了后续拆分与持续演进空间。
+- 仓库入口标准化：根目录新增统一文档入口、协作规范、Issue/PR 模板与 CI 工作流。
 
-## ✨ 项目特色
+## 系统概览
 
-*   **前后端分离**：前端采用 React.js，后端采用 Python Flask。
-*   **DDD 领域驱动设计**：后端代码结构清晰，划分为 Auth（认证）、Social（社交）、Travel（旅行）三个核心领域。
-*   **现代化 UI**：采用 Dark Glassmorphism（深色玻璃拟态）设计风格，提供沉浸式的用户体验。
-*   **功能丰富**：
-    *   用户注册与登录
-    *   旅行计划管理（创建行程、添加活动、邀请成员）
-    *   社交广场（发布动态、点赞、评论）
-    *   即时通讯（好友聊天）
-
-## 🛠️ 技术栈
-
-*   **前端**：React, Vite, CSS Modules
-*   **后端**：Python, Flask, SQLAlchemy
-*   **数据库**：MySQL
-*   **其他**：Axios, React Router
-
-## 📂 项目结构
-
-### 后端结构 (Backend)
-
-后端采用领域驱动设计 (DDD) 架构：
-
-```text
-backend/src
-├── app.py                  # 应用入口
-├── app_auth/               # 认证领域 (用户管理)
-│   ├── domain/             # 领域层 (实体, 领域服务)
-│   ├── infrastructure/     # 基础设施层 (DAO, 仓储实现)
-│   ├── services/           # 应用服务层
-│   └── view/               # 接口层 (API Views)
-├── app_social/             # 社交领域 (帖子, 评论, 聊天)
-│   ├── domain/
-│   ├── infrastructure/
-│   ├── services/
-│   └── view/
-├── app_travel/             # 旅行领域 (行程, 活动, 成员)
-│   ├── domain/
-│   ├── infrastructure/
-│   ├── services/
-│   └── view/
-├── shared/                 # 共享模块 (数据库核心, 事件总线)
-└── static/                 # 静态文件 (上传的图片等)
+```mermaid
+flowchart LR
+    UI["Frontend<br/>React + Vite"] --> API["Backend<br/>Flask + Socket.IO"]
+    API --> AUTH["Auth"]
+    API --> SOCIAL["Social"]
+    API --> TRAVEL["Travel"]
+    API --> ADMIN["Admin"]
+    API --> AI["AI Assistant"]
+    AUTH --> DB[("MySQL / SQLite")]
+    SOCIAL --> DB
+    TRAVEL --> DB
+    ADMIN --> DB
+    AI --> DEEPSEEK["DeepSeek API<br/>(optional)"]
 ```
 
-### 前端结构 (Frontend)
+## 仓库结构
 
-前端基于 React + Vite 构建：
+| 路径 | 说明 |
+| --- | --- |
+| `frontend/` | React + Vite 前端应用，负责页面、路由、组件和接口调用。 |
+| `backend/` | Flask 后端服务，包含领域模块、数据库访问、接口视图和测试。 |
+| `docs/` | 新增的仓库导航文档，面向开发者快速理解项目与协作流程。 |
+| `doc/` | 原有课程文档与设计说明，保留现状，不打断正在进行的内容修订。 |
+| `PlantUML/` | 架构图与建模素材。 |
+| `.github/` | Issue/PR 模板与 CI 工作流。 |
 
-```text
-frontend/src
-├── api/                    # API 接口封装 (auth, social, travel)
-├── assets/                 # 静态资源
-├── components/             # 公共组件 (Button, Card, Input, Layout...)
-├── context/                # 全局状态 (AuthContext)
-├── pages/                  # 页面组件
-│   ├── auth/               # 认证相关页面 (Login, Register, Profile)
-│   ├── social/             # 社交相关页面 (Feed, Chat, PostDetail)
-│   └── travel/             # 旅行相关页面 (MyTrips, TripDetail...)
-├── styles/                 # 全局样式 (theme.css)
-├── App.jsx                 # 根组件 (路由配置)
-└── main.jsx                # 入口文件
-```
+更详细的目录说明见 [docs/repository-map.md](docs/repository-map.md)。
 
-## 🚀 快速开始 (Getting Started)
+## 功能模块
 
-### 1. 环境准备
+- `Auth`：注册、登录、个人资料、密码修改与重置。
+- `Travel`：行程创建、日程活动管理、成员协作、公共行程浏览。
+- `Social`：动态发布、评论点赞、好友关系、聊天会话。
+- `AI`：接入 DeepSeek 的旅行问答与辅助生成能力。
+- `Admin`：后台数据查看与运营辅助能力。
 
-*   Node.js & npm
-*   Python 3.8+
-*   MySQL Database
+## 技术栈
 
-### 2. 启动后端服务器
+- 前端：React 19、Vite 7、React Router、Axios、Socket.IO Client
+- 后端：Flask、Flask-Cors、SQLAlchemy、PyMySQL、Socket.IO
+- AI：LangChain、langchain-openai、DeepSeek API
+- 测试：Pytest
+- 文档：Markdown、PlantUML、Mermaid
 
-确保 MySQL 服务已启动，并配置好数据库连接。
+## 快速开始
+
+### 环境要求
+
+- Node.js 20+
+- Python 3.10+
+- MySQL 8+（可选；未配置时后端默认回退到 SQLite）
+
+### 1. 启动后端
 
 ```bash
-# 进入后端目录
-cd travel_sharing_app_v0/backend
+cd backend
+python -m venv .venv
 
-# 激活虚拟环境 (Windows)
-# 如果没有创建虚拟环境，请先创建: python -m venv .venv
+# Windows
 .venv\Scripts\activate
 
-# 安装依赖
-pip install -r requirements.txt
+# macOS / Linux
+source .venv/bin/activate
 
-# 启动应用
-.venv\Scripts\python.exe src/app.py
+pip install -r requirements.txt
+copy .env.example .env
+python src/app.py
 ```
 
-### 3. 启动前端服务器
+后端默认运行在 `http://localhost:5001`。
+
+### 2. 启动前端
 
 ```bash
-# 进入前端目录
-cd travel_sharing_app_v0/frontend
-
-# 安装依赖
+cd frontend
 npm install
-
-# 启动开发服务器
 npm run dev
 ```
 
-访问本地地址：`http://localhost:5173` (默认 Vite 端口)
+前端默认运行在 `http://localhost:5173`，并通过 Vite 代理将 `/api` 和 `/static` 转发到后端服务。
 
+### 3. 运行验证
 
+```bash
+# backend smoke test
+cd backend
+python -m pytest tests/integration/view/test_auth_view.py -q
+
+# frontend
+cd frontend
+npm run lint
+npm run build
+```
+
+如果你已经准备好了 MySQL、本地测试数据以及外部服务配置，也可以在 `backend/` 下执行完整的 `python -m pytest`。当前仓库中的部分集成测试依赖真实数据库或第三方接口，因此默认更推荐先跑上面的 smoke 流程。
+
+## 配置说明
+
+后端当前支持的关键环境变量：
+
+| 变量 | 说明 | 默认值 |
+| --- | --- | --- |
+| `DATABASE_URL` | 数据库连接串 | `sqlite:///./travel_sharing.db` |
+| `DEEPSEEK_API_KEY` | DeepSeek API Key | 无 |
+| `DEEPSEEK_BASE_URL` | DeepSeek 服务地址 | `https://api.deepseek.com` |
+
+示例配置见 [backend/.env.example](backend/.env.example)。
+
+## 文档入口
+
+- [docs/README.md](docs/README.md)：仓库文档导航
+- [docs/getting-started.md](docs/getting-started.md)：本地开发与联调步骤
+- [docs/repository-map.md](docs/repository-map.md)：仓库结构说明与维护约定
+- [doc/requirements/](doc/requirements/)：课程需求文档
+- [doc/design/](doc/design/)：架构设计与详细设计文档
+- [TODO.md](TODO.md)：当前待办与后续计划
+
+## 协作与规范
+
+- 提交问题前，请先查看 [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/)
+- 提交代码前，请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)
+- 协作行为约定见 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- 安全问题处理方式见 [SECURITY.md](SECURITY.md)
+- 本次仓库规范化变更记录见 [CHANGELOG.md](CHANGELOG.md)
+
+## 设计说明
+
+这次仓库重构遵循以下原则：
+
+- 不打断现有课程文档的编写节奏，因此保留 `doc/` 原目录不搬迁。
+- 把“仓库入口层”统一到根目录和 `docs/`，让第一次进入项目的人更快找到启动方式。
+- 用 GitHub 模板与 CI 兜住协作流程，减少后续维护成本。

@@ -1,4 +1,4 @@
-# 项目接口需求分析
+# 2.5 接口需求分析
 
 ## 1. 引言
 
@@ -14,7 +14,7 @@
 *   **响应格式**：`Content-Type: application/json`。
 *   **字符编码**：UTF-8。
 
-### 2.2 状态码规范 (HTTP Status Codes)
+### 2.2 状态码规范
 *   `200 OK`：请求成功。
 *   `201 Created`：资源创建成功。
 *   `204 No Content`：删除成功，无返回内容。
@@ -35,8 +35,8 @@
 
 ## 3. 模块接口详解
 
-### 3.1 用户认证模块 (Auth Module)
-**Base URL**: `/api/auth`
+### 3.1 用户认证模块
+**基础路径**： `/api/auth`
 
 | 方法 | 路径 | 描述 | 请求参数/Body | 响应示例 |
 | :--- | :--- | :--- | :--- | :--- |
@@ -48,7 +48,7 @@
 | GET | `/users/{id}` | 获取特定用户信息 | - | `{ "id": "...", "username": "...", "profile": { ... } }` |
 | POST | `/change-password` | 修改密码 | `{ "old_password": "...", "new_password": "..." }` | `{ "message": "Success" }` |
 
-**注册登录流程图 (PlantUML)**
+**注册登录流程图**
 
 ```plantuml
 @startuml
@@ -75,10 +75,10 @@ end
 User -> FE: Enter Credentials
 FE -> API: POST /api/auth/login
 API -> DB: Find User by Email
-alt Not Found / Invalid PWD
+alt 资源不存在 / 密码无效
     API --> FE: 401 Unauthorized
 else Valid
-    API -> API: Generate Session
+    API -> API: 生成会话
     API --> FE: 200 OK (User Info)
 end
 @enduml
@@ -86,11 +86,10 @@ end
 
 ---
 
-### 3.2 旅行核心模块 (Travel Module)
-**Base URL**: `/api/travel`
+### 3.2 旅行核心模块
+**基础路径**： `/api/travel`
 
-#### 3.2.1 行程基础 (Trip CRUD)
-
+#### 3.2.1 行程基础
 | 方法 | 路径 | 描述 | 请求参数/Body | 响应示例 |
 | :--- | :--- | :--- | :--- | :--- |
 | POST | `/trips` | 创建行程 | `{ "name": "Trip to Paris", "start_date": "2024-05-01", "end_date": "2024-05-05" }` | `{ "id": "trip_123", "days": [...] }` (201) |
@@ -101,14 +100,13 @@ end
 | GET | `/trips/public` | 广场公开行程 | Query: `limit=20`, `offset=0` | `[ { "id": "...", "cover_image_url": "..." }, ... ]` |
 | GET | `/trips/{id}/statistics`| 获取统计报表 | - | `{ "total_distance_meters": 15000, "total_cost": ... }` |
 
-#### 3.2.2 成员管理 (Members)
-
+#### 3.2.2 成员管理
 | 方法 | 路径 | 描述 | 请求参数/Body | 响应示例 |
 | :--- | :--- | :--- | :--- | :--- |
 | POST | `/trips/{id}/members` | 邀请/添加成员 | `{ "user_id": "u_123", "role": "member" }` | `{ "members": [ ... ] }` |
 | DELETE | `/trips/{id}/members/{uid}` | 移除成员 | - | `{ "members": [ ... ] }` |
 
-#### 3.2.3 日程与活动 (Itinerary)
+#### 3.2.3 日程与活动
 这是最复杂的交互部分，涉及交通自动计算。
 
 | 方法 | 路径 | 描述 | 请求参数/Body | 响应示例 |
@@ -118,7 +116,7 @@ end
 | DELETE | `/trips/{tid}/days/{idx}/activities/{aid}` | 移除活动 | - | `{ "transits": [...] }` |
 | PUT | `/trips/{tid}/days/{idx}/transits/{tr_id}` | 修改交通方式 | `{ "transport_mode": "driving" }` | `{ "id": "tr_id", "mode": "driving", "duration": ... }` |
 
-**活动添加与交通计算时序图 (PlantUML)**
+**活动添加与交通计算时序图**
 
 ```plantuml
 @startuml
@@ -152,11 +150,10 @@ API --> User: 201 Created (JSON with Transits)
 
 ---
 
-### 3.3 社交互动模块 (Social Module)
-**Base URL**: `/api/social`
+### 3.3 社交互动模块
+**基础路径**： `/api/social`
 
-#### 3.3.1 帖子 (Posts)
-
+#### 3.3.1 帖子
 | 方法 | 路径 | 描述 | 请求参数/Body | 响应示例 |
 | :--- | :--- | :--- | :--- | :--- |
 | POST | `/posts` | 发布帖子 | **FormData** <br> `title`, `content`, `media_files`, `trip_id` | `{ "post_id": "...", "created_at": "..." }` |
@@ -179,8 +176,8 @@ API --> User: 201 Created (JSON with Transits)
 
 ---
 
-### 3.4 AI 智能助手模块 (AI Module)
-**Base URL**: `/api/ai`
+### 3.4 AI 智能助手模块
+**基础路径**： `/api/ai`
 
 | 方法 | 路径 | 描述 | 请求参数/Body | 响应机制 |
 | :--- | :--- | :--- | :--- | :--- |
@@ -188,7 +185,7 @@ API --> User: 201 Created (JSON with Transits)
 | GET | `/conversations` | 获取历史对话 | - | `[ { "id": "...", "title": "..." } ]` |
 | DELETE | `/conversations/{id}` | 删除对话 | - | 200 OK |
 
-**RAG 问答交互图 (PlantUML)**
+**RAG 问答交互图**
 
 ```plantuml
 @startuml
@@ -212,8 +209,8 @@ API --> User: SSE Event: end (with attachment cards)
 
 ---
 
-### 3.5 后台管理模块 (Admin Module)
-**Base URL**: `/api/admin`
+### 3.5 后台管理模块
+**基础路径**： `/api/admin`
 **权限要求**: `role='admin'`
 
 系统提供了一套通用的资源管理接口，用于 CRUD 所有数据库实体。
@@ -228,11 +225,10 @@ API --> User: SSE Event: end (with attachment cards)
 
 ---
 
-### 3.6 实时通信接口 (WebSocket)
-
+### 3.6 实时通信接口
 基于 `Socket.IO` 协议，命名空间 `/`.
 
-**客户端监听事件 (Client Listens)**
+**客户端监听事件**
 *   `message_received`: 收到新聊天消息。
     ```json
     {
@@ -242,14 +238,14 @@ API --> User: SSE Event: end (with attachment cards)
     ```
 *   `notification`: 系统通知（如被拉入群、行程变更）。
 
-**客户端发送事件 (Client Emits)**
+**客户端发送事件**
 *   `join`: 加入房间（进入某个聊天窗口）。
     ```json
     { "room": "conversation_{id}" }
     ```
 *   `leave`: 离开房间。
 
-**实时聊天流程图 (PlantUML)**
+**实时聊天流程图**
 
 ```plantuml
 @startuml

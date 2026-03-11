@@ -16,10 +16,8 @@
 
 ---
 
-## 2. 视觉设计系统 (Visual Design System)
-
-### 2.1 基础色板 (Color Palette)
-
+## 2. 视觉设计系统
+### 2.1 基础色板
 系统采用“暗夜玻璃”配色方案，主色调为深蓝灰色，辅以霓虹蓝作为强调色。
 
 | 变量名 | 颜色值 (参考) | 用途描述 |
@@ -32,8 +30,7 @@
 | `--color-travel` | `#06B6D4` (Cyan) | 旅行模块主题色 |
 | `--color-danger` | `#ef4444` (Red) | 删除、错误提示 |
 
-### 2.2 字体排版 (Typography)
-
+### 2.2 字体排版
 全局字体栈优先使用系统默认无衬线字体，确保加载速度和操作系统原生体验。
 
 *   **Font Family**: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`
@@ -44,8 +41,7 @@
     *   **Body (Regular)**: 14px - 16px, Regular
     *   **Small (Caption)**: 12px, Regular, Text-Secondary
 
-### 2.3 阴影与特效 (Effects)
-
+### 2.3 阴影与特效
 *   **Glassmorphism**:
     *   `background`: `rgba(255, 255, 255, 0.05)` (超轻微白) 或 `var(--bg-secondary)`
     *   `backdrop-filter`: `blur(12px)` (背景模糊)
@@ -56,8 +52,7 @@
 
 ---
 
-## 3. 全局布局架构 (Global Layout)
-
+## 3. 全局布局架构
 ### 3.1 主应用布局 (`Layout.jsx`)
 
 应用采用经典的 **左侧导航 + 右侧内容** 布局结构，最大化利用宽屏空间展示地图和信息流。
@@ -94,7 +89,7 @@ end note
 @enduml
 ```
 
-#### 3.1.1 侧边导航栏 (Sidebar)
+#### 3.1.1 侧边导航栏
 *   **位置**：屏幕左侧固定。
 *   **状态**：支持展开（显示图标+文字）和折叠（仅显示图标）两种模式，通过底部的 `Chevron` 按钮切换。
 *   **导航项**：
@@ -105,16 +100,14 @@ end note
     *   **我的 (Profile)**: 图标 `User`，链接至 `/profile/:id`
 *   **交互**：当前激活路由对应的导航项会有高亮背景色（根据模块不同，高亮色略有差异，如 Social 为蓝色，Travel 为青色）。
 
-#### 3.1.2 内容区域 (Main)
+#### 3.1.2 内容区域
 *   **位置**：屏幕右侧剩余空间。
 *   **特性**：包含 `<Outlet />` 组件，用于渲染子路由页面。具备独立的滚动条（`overflow-y: auto`），确保侧边栏始终可见。
 
 ---
 
-## 4. 详细页面设计 (Page Designs)
-
-### 4.1 认证模块 (Authentication)
-
+## 4. 详细页面设计
+### 4.1 认证模块
 #### 4.1.1 登录/注册页 (`LoginPage.jsx`, `RegisterPage.jsx`)
 *   **布局**：全屏居中卡片布局。背景为带有动态渐变的深色背景。
 *   **组件**：
@@ -124,8 +117,7 @@ end note
     *   **切换链接**：底部提供“去注册”或“去登录”的文本链接。
 *   **反馈**：表单验证失败时，输入框变红并显示下方错误提示文本。
 
-### 4.2 社交模块 (Social Context)
-
+### 4.2 社交模块
 #### 4.2.1 社区动态页 (`FeedPage.jsx`)
 *   **布局**：单列瀑布流或列表布局，居中显示，宽度限制在 600px - 800px 以提升阅读体验。
 *   **顶部栏**：
@@ -157,8 +149,7 @@ end note
     *   **输入区**：文本框、表情按钮、图片上传按钮、发送按钮。
     *   **特殊消息**：支持渲染“行程分享卡片”，点击可查看行程详情。
 
-### 4.3 旅行模块 (Travel Context)
-
+### 4.3 旅行模块
 #### 4.3.1 旅行首页 (`TravelPage.jsx`)
 *   **布局**：仪表盘式布局。
 *   **概览卡片**：展示“即将开始的行程”、“总足迹数”等统计数据。
@@ -184,8 +175,7 @@ end note
     2.  **概览 (Overview)**: 预算图表（饼图）、成员列表、备注信息。
     3.  **相册 (Gallery)**: 瀑布流展示该行程相关的所有图片。
 
-### 4.4 AI 助手模块 (AI Assistant)
-
+### 4.4 AI 助手模块
 #### 4.4.1 AI 对话页 (`AiChatPage.jsx`)
 *   **布局**：类似 ChatPage 的全屏对话界面。
 *   **特色组件**：
@@ -195,8 +185,7 @@ end note
 
 ---
 
-## 5. 组件层级设计 (Component Hierarchy)
-
+## 5. 组件层级设计
 ```plantuml
 @startuml
 title 前端组件树 (简化版)
@@ -247,8 +236,7 @@ package "TripDetail Sub-components" {
 
 ---
 
-## 6. 交互与状态流转 (Interaction Flows)
-
+## 6. 交互与状态流转
 ### 6.1 创建行程交互流
 
 用户从点击“创建行程”到完成初始规划的流程。
@@ -280,8 +268,7 @@ package "TripDetail Sub-components" {
 
 ---
 
-## 7. 响应式与适配策略 (Responsive Strategy)
-
+## 7. 响应式与适配策略
 虽然主要针对桌面端（1280px+）设计，但通过 CSS Modules 和 Flexbox 实现了基本的向下兼容：
 
 *   **Mobile (< 768px)**:

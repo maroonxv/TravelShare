@@ -1,3 +1,52 @@
 给人看的
 .kiro/
+
+# Dependencies
+frontend/node_modules/
+backend/.venv/
+
+# Build artifacts
+frontend/dist/
+build/
+dist/
+
+# Python cache
+__pycache__/
+*.py[cod]
 .pytest_cache/
+backend/.pytest_cache/
+
+# Coverage
+.coverage
+.coverage.*
+coverage/
+htmlcov/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!backend/.env.example
+backend/.env
+frontend/.env
+
+# Databases and local data
+*.db
+*.sqlite
+*.sqlite3
+travel_sharing.db
+
+# Logs
+*.log
+logs/
+
+# IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Misc
+*.tmp
+*.bak
+*.swp
