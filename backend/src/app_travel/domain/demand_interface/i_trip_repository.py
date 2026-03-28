@@ -58,12 +58,13 @@ class ITripRepository(ABC):
         pass
     
     @abstractmethod
-    def find_public(self, limit: int = 20, offset: int = 0) -> List[Trip]:
+    def find_public(self, limit: int = 20, offset: int = 0, search_query: Optional[str] = None) -> List[Trip]:
         """查找公开的旅行
         
         Args:
             limit: 每页数量
             offset: 偏移量
+            search_query: 搜索关键词
             
         Returns:
             旅行列表

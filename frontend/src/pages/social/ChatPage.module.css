@@ -238,6 +238,13 @@
     font-weight: 700;
 }
 
+.senderName {
+    font-size: 0.75rem;
+    color: var(--color-accent);
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
 .messageBubble {
     max-width: 65%;
     padding: 10px 16px; /* Increased padding */

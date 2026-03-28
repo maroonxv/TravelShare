@@ -629,7 +629,19 @@ const ChatPage = () => {
                             {messages.map((msg, index) => {
                                 const isMe = msg.sender_id === user?.id;
                                 const prevMsg = messages[index - 1];
-                                const isChain = prevMsg && prevMsg.sender_id === msg.sender_id;
+                                const prevTimestamp = prevMsg
+                                    ? Date.parse(prevMsg.sent_at || prevMsg.created_at || '')
+                                    : Number.NaN;
+                                const currentTimestamp = Date.parse(msg.sent_at || msg.created_at || '');
+                                const isChain = Boolean(
+                                    prevMsg &&
+                                    prevMsg.sender_id === msg.sender_id &&
+                                    (
+                                        !Number.isFinite(prevTimestamp) ||
+                                        !Number.isFinite(currentTimestamp) ||
+                                        currentTimestamp - prevTimestamp < 5 * 60 * 1000
+                                    )
+                                );
                                 const senderProfile = isGroupConv ? memberProfiles[msg.sender_id] : null;
                                 const senderAvatar = isMe ? user?.profile?.avatar_url : senderProfile?.profile?.avatar_url;
                                 const senderName = isMe ? (user?.username || '我') : (senderProfile?.username || msg.sender_id?.slice(0, 6) || 'U');

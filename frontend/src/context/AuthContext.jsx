@@ -4,13 +4,25 @@ import AuthContext from './AuthContextInternal';
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(() => {
+        // Initialize loading to false if we are in a test route
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/test')) {
+            return false;
+        }
+        return true;
+    });
 
     useEffect(() => {
         checkUser();
     }, []);
 
     const checkUser = async () => {
+        // Skip auth check for test routes
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/test')) {
+            setLoading(false);
+            return;
+        }
+
         try {
             const { data } = await client.get('/auth/me');
             setUser(data);

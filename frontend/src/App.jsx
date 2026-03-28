@@ -25,56 +25,66 @@ import TripDetailPage from './pages/travel/TripDetailPage';
 import AdminLayout from './admin/components/AdminLayout';
 import AdminResourcePage from './admin/pages/AdminResourcePage';
 import AiChatPage from './pages/ai/AiChatPage';
+import TripMapTestPage from './pages/test/TripMapTestPage';
 
 import { Toaster } from 'react-hot-toast';
 
 function App() {
+  console.log('App rendering; current path:', window.location.pathname);
   return (
     <Router>
-      <AuthProvider>
-        <Toaster position="top-right" />
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/auth/login" element={<LoginPage />} />
-          <Route path="/auth/register" element={<RegisterPage />} />
-          <Route path="/" element={<Navigate to="/social" replace />} />
+      <Routes>
+        {/* Test Route - Standalone, outside AuthProvider to avoid auth logic completely */}
+        <Route path="/test/trip-map" element={<TripMapTestPage />} />
+        
+        {/* Main App with AuthProvider */}
+        <Route path="*" element={
+          <AuthProvider>
+            <Toaster position="top-right" />
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/auth/login" element={<LoginPage />} />
+              <Route path="/auth/register" element={<RegisterPage />} />
+              <Route path="/" element={<Navigate to="/social" replace />} />
 
-          {/* Admin Routes */}
-          <Route path="/admin" element={<AdminLayout />}>
-             <Route index element={<Navigate to="users" replace />} />
-             <Route path=":resourceName" element={<AdminResourcePage />} />
-          </Route>
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminLayout />}>
+                 <Route index element={<Navigate to="users" replace />} />
+                 <Route path=":resourceName" element={<AdminResourcePage />} />
+              </Route>
 
-          {/* Protected Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<Layout />}>
-              {/* Social */}
-              <Route path="/social" element={<FeedPage />} />
-              <Route path="/social/create" element={<CreatePostPage />} />
-              <Route path="/social/post/:id" element={<PostDetailPage />} />
-              
-              {/* Chat */}
-              <Route path="/chat" element={<ChatPage />} />
+              {/* Protected Routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<Layout />}>
+                  {/* Social */}
+                  <Route path="/social" element={<FeedPage />} />
+                  <Route path="/social/create" element={<CreatePostPage />} />
+                  <Route path="/social/post/:id" element={<PostDetailPage />} />
+                  
+                  {/* Chat */}
+                  <Route path="/chat" element={<ChatPage />} />
 
-              {/* AI */}
-              <Route path="/ai-assistant" element={<AiChatPage />} />
+                  {/* AI */}
+                  <Route path="/ai-assistant" element={<AiChatPage />} />
 
-              {/* Travel */}
-              <Route path="/travel" element={<TravelPage />} />
-              <Route path="/travel/my-trips" element={<MyTripsPage />} />
-              <Route path="/travel/public" element={<PublicTripsPage />} />
-              <Route path="/travel/:tripId" element={<TripDetailPage />} />
-              
-              {/* Profile */}
-              <Route path="/profile/:userId" element={<ProfilePage />} />
-              <Route path="/profile/edit" element={<ManageProfilePage />} />
-            </Route>
-          </Route>
+                  {/* Travel */}
+                  <Route path="/travel" element={<TravelPage />} />
+                  <Route path="/travel/my-trips" element={<MyTripsPage />} />
+                  <Route path="/travel/public" element={<PublicTripsPage />} />
+                  <Route path="/travel/:tripId" element={<TripDetailPage />} />
+                  
+                  {/* Profile */}
+                  <Route path="/profile/:userId" element={<ProfilePage />} />
+                  <Route path="/profile/edit" element={<ManageProfilePage />} />
+                </Route>
+              </Route>
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/social" replace />} />
-        </Routes>
-      </AuthProvider>
+              {/* Fallback */}
+              <Route path="*" element={<Navigate to="/social" replace />} />
+            </Routes>
+          </AuthProvider>
+        } />
+      </Routes>
     </Router>
   );
 }
